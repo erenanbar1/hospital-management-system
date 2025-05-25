@@ -4,7 +4,7 @@ import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDown } from "lucide-react"
 
-import { cn } from "../../lib/utils"
+import { cn } from "@/lib/utils"
 
 const Accordion = AccordionPrimitive.Root
 
@@ -38,7 +38,7 @@ const AccordionTrigger = React.forwardRef<
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
-AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
+AccordionTrigger.displayName = "AccordionTrigger"
 
 const AccordionContent = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Content>,
@@ -46,13 +46,36 @@ const AccordionContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Content
     ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+    className={cn(
+      "overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
+      className
+    )}
     {...props}
   >
-    <div className={cn("pb-4 pt-0", className)}>{children}</div>
+    <div className="pb-4 pt-0">{children}</div>
   </AccordionPrimitive.Content>
 ))
-
-AccordionContent.displayName = AccordionPrimitive.Content.displayName
+AccordionContent.displayName = "AccordionContent"
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
+
+// This is a simplified version. You may need to implement the full toast component system
+import { useState, useCallback } from 'react';
+
+type ToastProps = {
+  variant?: 'default' | 'destructive';
+  title?: string;
+  description?: string;
+};
+
+export function useToast() {
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  const toast = useCallback(({ title, description, variant = 'default' }: ToastProps) => {
+    // In a real implementation, this would show a toast notification
+    console.log(`Toast: ${variant} - ${title}: ${description}`);
+    // For now, we'll just log it instead of implementing the full UI
+  }, []);
+
+  return { toast };
+}

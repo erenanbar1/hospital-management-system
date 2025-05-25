@@ -1,12 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar } from "lucide-react"
+import { Calendar, Package, Search, AlertCircle, X } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { DoctorScheduleCalendar } from "@/components/DoctorScheduleCalendar"
 import { useUser } from "@/lib/hooks/useUser"
 import axios from "axios"
 import { useRouter } from "next/navigation"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { useInventoryScroll } from "@/lib/hooks/useInventoryScroll"
 
 interface TimeSlot {
   ts_id: string
@@ -17,18 +30,40 @@ interface TimeSlot {
 interface DoctorAppointment {
   patient_name: string;
   date: string;
-  starttime?: string;  // Alternative property names from API
+  starttime?: string;
   endtime?: string;
+}
+
+// Interface for inventory items to match the API response
+interface InventoryItem {
+  id: string;
+  name: string;
+  format: string;
+  amount: string;
 }
 
 export default function DoctorDashboard() {
   const router = useRouter()
   const { userId, userRole } = useUser()
+  const { inventoryRef, scrollToInventory } = useInventoryScroll()
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
-  const [doctorAppointments, setDoctorAppointments] = useState<DoctorAppointment[]>([]);
+  const [doctorAppointments, setDoctorAppointments] = useState<DoctorAppointment[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false);
+  const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false)
+
+  // Inventory state
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [loadingInventory, setLoadingInventory] = useState<boolean>(false)
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [inventoryError, setInventoryError] = useState<string>("")
+
+  // Unavailability declaration state
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [declareLoading, setDeclareLoading] = useState(false)
+  const [declareError, setDeclareError] = useState<string>("")
+  const [declareSuccess, setDeclareSuccess] = useState<string>("")
 
   // Redirect non-doctors or unauthenticated users
   useEffect(() => {
@@ -46,6 +81,26 @@ export default function DoctorDashboard() {
       fetchDoctorAppointments(doctorId);
     }
   }, [selectedDate, userId])
+
+  // Fetch inventory immediately on component mount, not just when tab changes
+  useEffect(() => {
+    fetchInventoryItems();
+  }, []);
+
+  // Add this to your useEffect section:
+  useEffect(() => {
+    // Set up event listener for scrollToInventory event
+    const handleScrollToInventory = () => {
+      inventoryRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    document.addEventListener('scrollToInventory', handleScrollToInventory)
+
+    // Clean up
+    return () => {
+      document.removeEventListener('scrollToInventory', handleScrollToInventory)
+    }
+  }, [])
 
   const fetchAvailableSlots = async (docId: string) => {
     try {
@@ -78,7 +133,21 @@ export default function DoctorDashboard() {
       );
 
       if (response.data.success) {
-        setDoctorAppointments(response.data.appointments);
+        const currentDate = new Date();
+        // Filter out past appointments and keep only upcoming ones
+        const upcomingAppointments = response.data.appointments.filter(appointment => {
+          const appointmentDateTime = new Date(appointment.date + (appointment.starttime ? 'T' + appointment.starttime : ''));
+          return appointmentDateTime >= currentDate;
+        });
+
+        // Sort upcoming appointments by date (closest to furthest)
+        const sortedAppointments = upcomingAppointments.sort((a, b) => {
+          const dateA = new Date(a.date + (a.starttime ? 'T' + a.starttime : ''));
+          const dateB = new Date(b.date + (b.starttime ? 'T' + b.starttime : ''));
+          return dateA.getTime() - dateB.getTime();
+        });
+
+        setDoctorAppointments(sortedAppointments);
       }
     } catch (error) {
       console.error('Error fetching doctor appointments:', error);
@@ -86,6 +155,94 @@ export default function DoctorDashboard() {
       setLoadingAppointments(false);
     }
   };
+
+  // Updated fetchInventoryItems function with direct URL
+  const fetchInventoryItems = async () => {
+    try {
+      setLoadingInventory(true);
+      setInventoryError("");
+
+      // Use a simple direct URL here for testing
+      const apiUrl = "http://localhost:8000/api/equipment/";
+
+      console.log("Fetching inventory from:", apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Full API response:", data);
+
+      if (data && data.success) {
+        setInventoryItems(data.equipment);
+        console.log("Successfully loaded inventory from API:", data.equipment);
+      } else {
+        throw new Error("Invalid API response format");
+      }
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
+      setInventoryError(`Failed to load inventory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Fall back to mock data
+      console.log("Using mock inventory data as fallback");
+      setInventoryItems([
+        { id: "ME001", name: "Syringe", format: "Piece", amount: "100" },
+        { id: "ME002", name: "Stethoscope", format: "Piece", amount: "20" },
+        { id: "ME003", name: "Gloves", format: "Box", amount: "50" }
+      ]);
+    } finally {
+      setLoadingInventory(false);
+    }
+  };
+
+  const declareUnavailability = async () => {
+    if (!selectedSlot) return
+
+    setDeclareLoading(true)
+    setDeclareError("")
+    setDeclareSuccess("")
+
+    try {
+      const doctorId = userId || 'U0006'
+
+      const response = await fetch("http://localhost:8000/api/doctor_declare_unavailability/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ts_id: selectedSlot,
+          doc_id: doctorId,
+          date: selectedDate,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setDeclareSuccess(`Successfully marked as unavailable. (ID: ${data.ua_id})`)
+        // Refresh the schedule to reflect the changes
+        fetchAvailableSlots(doctorId)
+        setConfirmDialogOpen(false)
+      } else {
+        setDeclareError(data.message || "Failed to mark as unavailable")
+      }
+    } catch (error) {
+      console.error("Error declaring unavailability:", error)
+      setDeclareError("An error occurred while marking unavailability")
+    } finally {
+      setDeclareLoading(false)
+    }
+  }
 
   const handleDateSelect = (date: string) => {
     console.log('Date selected:', date)
@@ -103,16 +260,78 @@ export default function DoctorDashboard() {
     })
   }
 
-  // Remove the conditional return for no userId
-  // Instead, we'll use a fallback ID for demo/testing purposes
+  const getTimeIntervalForSlot = (tsId: string): string => {
+    // Extract the number from the TS format
+    const slotNumber = parseInt(tsId.replace('TS', ''), 10);
+    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 10) {
+      return 'Unknown time';
+    }
+
+    // Calculate time display for 10 slots between 8:00 AM and 1:00 PM
+    const startHour = 8 + Math.floor((slotNumber - 1) / 2);
+    const startMin = (slotNumber - 1) % 2 === 0 ? "00" : "30";
+    const endHour = startHour + ((startMin === "30") ? 1 : 0);
+    const endMin = startMin === "00" ? "30" : "00";
+
+    // Format for 12-hour display
+    const formatTime = (hour: number, min: string) => {
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${displayHour}:${min} ${period}`;
+    };
+
+    return `${formatTime(startHour, startMin)} to ${formatTime(endHour, endMin)}`;
+  };
+
+  // Filter inventory items based on search term
+  const filteredInventoryItems = inventoryItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+
+  const fetchUpcomingAppointments = async (doctorId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/get_doctor_appointments/${doctorId}/`);
+      const data = await response.json();
+
+      if (data.success && data.appointments) {
+        // Sort appointments by date
+        const sortedAppointments = [...data.appointments].sort((a, b) => {
+          const dateA = new Date(`${a.date}T${a.startTime || a.starttime}`);
+          const dateB = new Date(`${b.date}T${b.startTime || b.starttime}`);
+          return dateA.getTime() - dateB.getTime();
+        });
+
+        // Update state with the appointments
+        setDoctorAppointments(sortedAppointments);
+      } else {
+        console.error("Failed to fetch doctor appointments");
+        setDoctorAppointments([]);
+      }
+
+    } catch (error) {
+      console.error("Error fetching doctor appointments:", error);
+      setDoctorAppointments([]);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  useEffect(() => {
+    const doctorId = userId || 'U0006';
+    setLoadingAppointments(true);
+    fetchUpcomingAppointments(doctorId);
+  }, [userId]); // Re-fetch when userId changes
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <Card className="bg-white/90 backdrop-blur-sm">
+      {/* Main Schedule Card */}
+      <Card className="bg-white/90 backdrop-blur-sm mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-6 w-6" />
-            Doctor Schedule {userId && `(${userId})`}
+            Doctor Schedule {userId ? `(${userId})` : '(Demo Mode)'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -120,6 +339,8 @@ export default function DoctorDashboard() {
             <DoctorScheduleCalendar
               userId={userId || 'U0006'}
               onDateSelect={handleDateSelect}
+              appointments={doctorAppointments}
+              hideAppointmentLegend={true}
             />
 
             {/* Time Slots Display */}
@@ -137,20 +358,17 @@ export default function DoctorDashboard() {
               {isLoading ? (
                 <div className="text-center py-10">Loading schedule...</div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {/* Generate only 10 time slots from 8:00 AM to 12:30 PM */}
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Time slots rendering code */}
                   {Array.from({ length: 10 }).map((_, index) => {
-                    // Start from TS001, TS002, etc. to match the API
                     const slotNumber = index + 1
                     const tsId = `TS${String(slotNumber).padStart(3, '0')}`
 
-                    // Calculate time display - start at 8:00 AM
-                    const startHour = Math.floor((index + 16) / 2)
-                    const startMin = (index + 16) % 2 === 0 ? "00" : "30"
-                    const endHour = Math.floor((index + 17) / 2)
-                    const endMin = (index + 17) % 2 === 0 ? "00" : "30"
+                    const startHour = 8 + Math.floor(index / 2)
+                    const startMin = index % 2 === 0 ? "00" : "30"
+                    const endHour = startHour + (startMin === "30" ? 1 : 0)
+                    const endMin = startMin === "00" ? "30" : "00"
 
-                    // Format for 12-hour display
                     const formatTime = (hour: number, min: string) => {
                       const period = hour >= 12 ? 'PM' : 'AM'
                       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
@@ -159,29 +377,26 @@ export default function DoctorDashboard() {
 
                     const isAvailable = availableSlots.includes(tsId)
 
+                    const handleSlotClick = () => {
+                      if (isAvailable) {
+                        setSelectedSlot(tsId)
+                        setConfirmDialogOpen(true)
+                      }
+                    }
+
                     return (
                       <div
                         key={tsId}
-                        className={`
-                          p-4 rounded-lg border shadow-sm
-                          ${isAvailable
-                            ? 'bg-green-50 border-green-200 hover:bg-green-100'
-                            : 'bg-red-50 border-red-200'
-                          } 
-                          transition-colors cursor-pointer
-                        `}
+                        className={`p-3 rounded-lg ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
+                          } text-white text-sm transition-colors cursor-pointer`}
                         title={`Time Slot: ${tsId}`}
+                        onClick={handleSlotClick}
                       >
-                        <div className="flex justify-center items-center mb-2">
-                          <span className={`text-xs px-2 py-1 rounded-full ${isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                            {isAvailable ? 'Available' : 'Unavailable'}
-                          </span>
-                        </div>
-                        <div className="font-medium text-center">
+                        <div className="font-medium">
                           {formatTime(startHour, startMin)}
-                          <span className="mx-1">-</span>
-                          {formatTime(endHour, endMin)}
+                        </div>
+                        <div className="text-xs opacity-90">
+                          to {formatTime(endHour, endMin)}
                         </div>
                       </div>
                     )
@@ -190,72 +405,258 @@ export default function DoctorDashboard() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Upcoming Appointments Section */}
-          <div className="mt-8 pt-6 border-t">
-            <h3 className="font-semibold text-lg mb-4">Upcoming Appointments</h3>
+      {/* Upcoming Appointments Card */}
+      <Card className="bg-white/90 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-6 w-6" />
+            Upcoming Appointments
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingAppointments ? (
+            <div className="flex items-center justify-center p-6">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent"></div>
+              <span className="ml-2 text-sm text-gray-500">Loading appointments...</span>
+            </div>
+          ) : doctorAppointments && doctorAppointments.length > 0 ? (
+            <div className="space-y-4">
+              {doctorAppointments.map((appointment, index) => {
+                const appointmentDate = new Date(appointment.date);
+                // Format date for display
+                const formattedDate = new Intl.DateTimeFormat('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }).format(appointmentDate);
 
-            {loadingAppointments ? (
-              <div className="text-center py-6">Loading appointments...</div>
-            ) : doctorAppointments.length > 0 ? (
-              <div className="bg-white rounded-md shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Patient
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Time
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {doctorAppointments.map((appointment, index) => {
-                      // Format the date for display
-                      const appointmentDate = new Date(appointment.date);
-                      const formattedDate = appointmentDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      });
+                // Format time for display - handle both startTime and starttime formats
+                const startTime = appointment.starttime || '';
+                const endTime = appointment.endtime || '';
 
-                      // Format the time - check both possible property names
-                      const startTime = appointment.starttime || appointment.starttime || 'N/A';
-                      const endTime = appointment.endtime || appointment.endtime || 'N/A';
+                interface FormatTimeFn {
+                  (timeString: string | undefined): string;
+                }
 
-                      // Only take the hours and minutes (HH:MM) part if it exists
-                      const formattedStartTime = startTime !== 'N/A' ? startTime.substring(0, 5) : 'N/A';
-                      const formattedEndTime = endTime !== 'N/A' ? endTime.substring(0, 5) : 'N/A';
+                const formatTime: FormatTimeFn = (timeString) => {
+                  if (!timeString) return '';
+                  // Convert 24h format to 12h format
+                  const [hours, minutes] = timeString.split(':');
+                  const hour = parseInt(hours, 10);
+                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                  const hour12 = hour % 12 || 12;
+                  return `${hour12}:${minutes} ${ampm}`;
+                };
 
-                      return (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="font-medium text-gray-900">{appointment.patient_name}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                            {formattedDate}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                            {formattedStartTime} - {formattedEndTime}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                const isToday = new Date().toDateString() === appointmentDate.toDateString();
+                const isPast = appointmentDate < new Date();
+
+                return (
+                  <div
+                    key={`${appointment.patient_name}-${appointment.date}-${startTime}`}
+                    className={`p-4 rounded-lg border ${isToday
+                      ? 'border-blue-500 bg-blue-50'
+                      : isPast
+                        ? 'border-gray-200 bg-gray-50 opacity-75'
+                        : 'border-green-200 bg-green-50'
+                      }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{appointment.patient_name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {formatTime(startTime)} - {formatTime(endTime)}
+                        </p>
+                        <p className="text-sm text-gray-500">{formattedDate}</p>
+                      </div>
+                      {isToday && (
+                        <Badge className="bg-blue-500">Today</Badge>
+                      )}
+                      {!isToday && !isPast && (
+                        <Badge className="bg-green-500">Upcoming</Badge>
+                      )}
+                      {isPast && (
+                        <Badge variant="outline" className="text-gray-500">Past</Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No upcoming appointments found.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Hospital Inventory Card */}
+      <Card className="bg-white/90 backdrop-blur-sm" ref={inventoryRef}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-6 w-6" />
+            Hospital Inventory
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <div className="flex items-center mb-6 gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  placeholder="Search inventory items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchInventoryItems}
+                disabled={loadingInventory}
+              >
+                Refresh
+              </Button>
+            </div>
+
+            {inventoryError && (
+              <Alert variant="destructive" className="mb-4 flex items-center">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="ml-2 flex-1">{inventoryError}</AlertDescription>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchInventoryItems}
+                  className="ml-auto text-xs"
+                >
+                  Retry
+                </Button>
+              </Alert>
+            )}
+
+            {loadingInventory ? (
+              <div className="text-center py-10">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-500 border-t-transparent"></div>
+                <p className="mt-2">Loading inventory...</p>
               </div>
             ) : (
-              <div className="text-center py-10 bg-gray-50 rounded-md">
-                <p className="text-gray-500">No upcoming appointments found.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead className="bg-cyan-600 text-white">
+                    <tr>
+                      {/* Removed the ID column */}
+                      <th className="p-3 text-left">Name</th>
+                      <th className="p-3 text-left">Format</th>
+                      <th className="p-3 text-left">Available</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInventoryItems.length > 0 ? (
+                      filteredInventoryItems.map((item) => (
+                        <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50">
+                          {/* Removed the ID column */}
+                          <td className="p-3 font-medium">{item.name}</td>
+                          <td className="p-3">{item.format}</td>
+                          <td className="p-3">
+                            <Badge variant={
+                              parseInt(item.amount) > 20
+                                ? 'success'
+                                : parseInt(item.amount) > 5
+                                  ? 'warning'
+                                  : 'destructive'
+                            }>
+                              {item.amount}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="text-center py-10 text-gray-500">
+                          {searchTerm
+                            ? "No inventory items match your search."
+                            : "No inventory items available."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Unavailability Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as Unavailable</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to mark this time slot as unavailable?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-gray-50 rounded-md p-3 mb-4">
+              <p><strong>Date:</strong> {formatDisplayDate(selectedDate)}</p>
+              {selectedSlot && (
+                <p><strong>Time Slot:</strong> {getTimeIntervalForSlot(selectedSlot)}</p>
+              )}
+            </div>
+
+            {declareError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
+                {declareError}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialogOpen(false)}
+              disabled={declareLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={declareUnavailability}
+              disabled={declareLoading}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {declareLoading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Processing...
+                </>
+              ) : (
+                'Mark as Unavailable'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Notification */}
+      {declareSuccess && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-md shadow-lg flex items-center max-w-md">
+          <span>{declareSuccess}</span>
+          <button
+            onClick={() => setDeclareSuccess("")}
+            className="ml-4 text-white hover:text-green-200"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
-  )
+  );
 }

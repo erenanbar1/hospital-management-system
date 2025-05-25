@@ -22,6 +22,8 @@ from api.views import user_login, user_registration, make_appointment_view, filt
 from api.patientViews.healthCardViews import get_health_card_view
 from api.staffViews.staffBloodTestView import create_blood_test_view, create_prescripton_view, prescribe_medication_view
 from api.staffViews.medicalEquipmentView import get_equipment_view
+from api.staffViews.createEquipmentView import create_equipment_view
+from api.staffViews.staffTestResultsView import get_patient_blood_tests_view, update_blood_test_results_view, get_recent_blood_tests_view
 
 from api.patientViews.getAppointmentViews import get_appointments_view, getDoctorAppointments
 
@@ -35,6 +37,7 @@ urlpatterns = [
     path('api/make_appointment/', make_appointment_view, name='make_appointment'),
     path('api/create_blood_test/', create_blood_test_view, name='create_blood_test'),
     path('api/equipment/', get_equipment_view, name='get_equipment'),
+    path('api/create_equipment/', create_equipment_view, name='create_equipment'),
     path('api/create_prescription/', create_prescripton_view, name='create_prescription'),
     path('api/prescribe_medication/', prescribe_medication_view, name='prescribe_medication'),
     path('api/get_appointments/<str:patient_id>/', get_appointments_view),
@@ -44,6 +47,9 @@ urlpatterns = [
     path('api/filter_doctors_by_dept/', filter_doctors_by_dept_view, name='filter_doctors_by_dept'),
     path('api/list_available_timeslots_of_doctor/', list_available_timeslots_of_doctor_view, name='list_available_timeslots_of_doctor'),
     path('api/doctor_declare_unavailability/', doctor_declare_unavailability_view, name='doctor_declare_unavailability'),
+    path('api/get_patient_blood_tests/<str:patient_id>/', get_patient_blood_tests_view, name='get_patient_blood_tests'),
+    path('api/update_blood_test_results/', update_blood_test_results_view, name='update_blood_test_results'),
+    path('api/get_recent_blood_tests/', get_recent_blood_tests_view, name='get_recent_blood_tests'),
 ]
 
 
