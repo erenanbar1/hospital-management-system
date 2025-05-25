@@ -14,9 +14,12 @@ def login(email: str, password: str):
     Attempts login; returns (u_id, role) on success or None on failure.
     Raises exceptions on connectivity errors.
     """
+<<<<<<< Updated upstream
     # Do NOT hash the password before querying
     pwd = password
 
+=======
+>>>>>>> Stashed changes
     # Read the SQL template
     with open(SQL_PATH, 'r') as f:
         query = f.read()
@@ -31,7 +34,11 @@ def login(email: str, password: str):
     try:
         with conn.cursor() as cur:
             # parameters repeated 4× for each UNION block
+<<<<<<< Updated upstream
             cur.execute(query, (email, pwd) * 4)
+=======
+            cur.execute(query, (email, password) * 4)
+>>>>>>> Stashed changes
             return cur.fetchone()  # (u_id, role) or None
     finally:
         conn.close()
