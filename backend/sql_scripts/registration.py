@@ -1,18 +1,7 @@
 #!/usr/bin/env python3
 import os
 import uuid
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-import hashlib
->>>>>>> Stashed changes
-=======
-import hashlib
->>>>>>> Stashed changes
-=======
-import hashlib
->>>>>>> Stashed changes
+
 import psycopg2
 
 import personalSettings
@@ -26,25 +15,12 @@ def generate_id() -> str:
     """Return a 5-character uppercase unique ID."""
     return uuid.uuid4().hex[:5].upper()
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
 def hash_password(password: str) -> str:
     """Hash the password with SHA-256."""
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
 def register(
     name: str,
     surname: str,
@@ -59,19 +35,9 @@ def register(
     """
     u_id  = generate_id()
     hc_id = generate_id()
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
     pwd = password  # No hashing
-=======
-    pwd_hash = hash_password(password)
->>>>>>> Stashed changes
-=======
-    pwd_hash = hash_password(password)
->>>>>>> Stashed changes
-=======
-    pwd_hash = hash_password(password)
->>>>>>> Stashed changes
+
 
     # Read the SQL template
     with open(SQL_PATH, 'r') as f:
@@ -92,19 +58,7 @@ def register(
                     'name':     name,
                     'surname':  surname,
                     'email':    email,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
                     'password': pwd,
-=======
-                    'password': pwd_hash,
->>>>>>> Stashed changes
-=======
-                    'password': pwd_hash,
->>>>>>> Stashed changes
-=======
-                    'password': pwd_hash,
->>>>>>> Stashed changes
                     'phone':    phone,
                     'hc_id':    hc_id,
                 })
