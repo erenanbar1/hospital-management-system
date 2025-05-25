@@ -24,8 +24,15 @@ def user_login(request):
             result = login_func(email, password)
 
             if result:
-                u_id, role = result
-                return JsonResponse({"success": True, "message": "Login successful.", "u_id": u_id, "role": role})
+                u_id, role, name, surname = result
+                return JsonResponse({
+                    "success": True, 
+                    "message": "Login successful.", 
+                    "u_id": u_id, 
+                    "role": role,
+                    "name": name,
+                    "surname": surname
+                })
             else:
                 return JsonResponse({"success": False, "message": "Invalid credentials."}, status=401)
         except Exception as e:

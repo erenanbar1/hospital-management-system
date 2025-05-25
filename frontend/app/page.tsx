@@ -56,6 +56,7 @@ export default function LoginPage() {
       // Store user data in localStorage
       localStorage.setItem("userId", data.u_id)
       localStorage.setItem("userType", data.role)
+      localStorage.setItem("userName", `${data.name} ${data.surname}`)
 
       // Redirect based on user role
       switch (data.role.toLowerCase()) {

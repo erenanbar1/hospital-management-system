@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Heart, User, Users, Calendar, FileText, Settings, Plus, Edit, Trash2 } from "lucide-react"
+import { useUser } from "@/hooks/use-user"
 
 export default function AdminDashboard() {
+  const { userName } = useUser()
   const users = [
     { id: 1, name: "John Doe", email: "john@example.com", role: "Patient", status: "Active" },
     { id: 2, name: "Dr. Smith", email: "smith@example.com", role: "Doctor", status: "Active" },
@@ -43,7 +45,7 @@ export default function AdminDashboard() {
             </Link>
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              <span>Admin</span>
+              <span>{userName || 'Loading...'}</span>
             </div>
           </nav>
         </div>

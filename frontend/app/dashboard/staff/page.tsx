@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Heart, FileText, Search } from "lucide-react"
+import { Heart, FileText, Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TestTube, Package, Plus } from "lucide-react"
+import { useUser } from "@/hooks/use-user"
 
 export default function StaffDashboard() {
+  const { userName } = useUser()
   const recentTests = [
     { id: "BT001", patient: "John Doe", type: "Blood Test", date: "2025-03-28", status: "Completed" },
     { id: "BT002", patient: "Jane Smith", type: "Blood Test", date: "2025-03-28", status: "Pending" },
@@ -46,7 +48,7 @@ export default function StaffDashboard() {
             </Link>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              <span>Staff Member</span>
+              <span>{userName || 'Loading...'}</span>
             </div>
           </nav>
         </div>
@@ -184,13 +186,12 @@ export default function StaffDashboard() {
                     <TableCell>{test.date}</TableCell>
                     <TableCell>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          test.status === "Completed"
-                            ? "bg-green-100 text-green-800"
-                            : test.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-blue-100 text-blue-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs ${test.status === "Completed"
+                          ? "bg-green-100 text-green-800"
+                          : test.status === "Pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-blue-100 text-blue-800"
+                          }`}
                       >
                         {test.status}
                       </span>
@@ -230,9 +231,8 @@ export default function StaffDashboard() {
                     <TableCell>{item.quantity}</TableCell>
                     <TableCell>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          item.status === "Available" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs ${item.status === "Available" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"
+                          }`}
                       >
                         {item.status}
                       </span>
