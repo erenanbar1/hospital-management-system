@@ -1,24 +1,256 @@
 "use client"
 
-import Link from "next/link"
-import { Heart, User, FileText } from "lucide-react"
+import { useState, useEffect } from "react"
+import { FileText } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronDown } from "lucide-react"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
+
+type HealthCardData = {
+  testdate: string;
+  cholesterol: string;
+  glucose: string;
+  hemoglobin: string;
+  whitebloodcell: string;
+  redbloodcell: string;
+  prescriptiondate: string;
+  usageinfo: string;
+  medicationname: string;
+  medicationformat: string;
+  medicationdosage: string;
+}
+
+// Define a type for grouped prescriptions
+type GroupedPrescription = {
+  date: string;
+  medications: Array<{
+    name: string;
+    format: string;
+    dosage: string;
+    usageinfo: string;
+  }>;
+}
 
 export default function HealthCard() {
-  const bloodTestResults = [
-    { name: "Vitamin A", value: "43 mcg/dL" },
-    { name: "Vitamin B", value: "xx mcg/dL" },
-    { name: "Vitamin C", value: "xx mcg/dL" },
-    { name: "Iron", value: "xx mcg/dL" },
-  ]
+  const [healthCardData, setHealthCardData] = useState<HealthCardData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [groupedData, setGroupedData] = useState<{
+    bloodTests: HealthCardData[];
+    prescriptions: GroupedPrescription[];
+  }>({ bloodTests: [], prescriptions: [] });
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const prescriptions = [
-    { name: "Arveles", format: "Pill", dosage: "50mg" },
-    { name: "Bilaxten", format: "Pill", dosage: "25mg" },
-  ]
+  // Get patient ID from localStorage - if not available, use a default value for testing
+  const [patientId, setPatientId] = useState<string | null>(null);
+  
+  // Debug localStorage function
+  const debugLocalStorage = () => {
+    console.log("==== DEBUG: localStorage and sessionStorage contents ====");
+    console.log("-- localStorage --");
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        try {
+          const value = localStorage.getItem(key);
+          console.log(`${key}: ${value}`);
+        } catch (e) {
+          console.log(`${key}: [Error reading value]`);
+        }
+      }
+    }
+    console.log("-- sessionStorage --");
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key) {
+        try {
+          const value = sessionStorage.getItem(key);
+          console.log(`${key}: ${value}`);
+        } catch (e) {
+          console.log(`${key}: [Error reading value]`);
+        }
+      }
+    }
+    console.log("=================================================");
+  };
+  
+  useEffect(() => {
+    // Debug localStorage and sessionStorage contents
+    debugLocalStorage();
+    
+    // Try multiple possible storage keys to find the user ID
+    const possibleKeys = ["patientId", "userId", "user_id", "id", "u_id", "uid"];
+    let foundId = null;
+    
+    // Check localStorage
+    for (const key of possibleKeys) {
+      const storedId = localStorage.getItem(key);
+      if (storedId) {
+        foundId = storedId;
+        console.log(`Found user ID in localStorage under key '${key}': ${storedId}`);
+        break;
+      }
+    }
+    
+    // Check sessionStorage if not found in localStorage
+    if (!foundId) {
+      for (const key of possibleKeys) {
+        const storedId = sessionStorage.getItem(key);
+        if (storedId) {
+          foundId = storedId;
+          console.log(`Found user ID in sessionStorage under key '${key}': ${storedId}`);
+          break;
+        }
+      }
+    }
+    
+    // Try to get user object if ID wasn't found directly
+    if (!foundId) {
+      // Check localStorage for user object
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const userData = JSON.parse(userStr);
+          foundId = userData.id || userData.u_id || userData.user_id || userData.patientId;
+          console.log("Found user ID in localStorage user object:", foundId);
+        } catch (e) {
+          console.error("Failed to parse user data from localStorage:", e);
+        }
+      }
+      
+      // Check sessionStorage for user object
+      if (!foundId) {
+        const userStr = sessionStorage.getItem('user');
+        if (userStr) {
+          try {
+            const userData = JSON.parse(userStr);
+            foundId = userData.id || userData.u_id || userData.user_id || userData.patientId;
+            console.log("Found user ID in sessionStorage user object:", foundId);
+          } catch (e) {
+            console.error("Failed to parse user data from sessionStorage:", e);
+          }
+        }
+      }
+    }
+    
+    if (foundId) {
+      setPatientId(foundId);
+    } else {
+      // If no user ID is found, show a specific error but continue to use fallback for development
+      console.error("No user ID found in storage. Using fallback ID for development only.");
+      
+      // In development, use fallback
+      if (process.env.NODE_ENV === 'development') {
+        setPatientId("U0002"); // Changed to U0002 for testing
+        toast({
+          variant: "warning",
+          title: "Development Mode",
+          description: "Using fallback user ID (U0002) for development.",
+        });
+      } else {
+        // In production, show error
+        setError("User ID not found. Please log in again.");
+        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "Cannot retrieve your health card without user ID. Please log in again.",
+        });
+      }
+    }
+  }, [toast]);
+
+  // Group health card data by test date and prescription date
+  useEffect(() => {
+    if (!healthCardData.length) return;
+
+    // Create map to store unique test dates
+    const testDatesMap = new Map();
+    // Create map to store medications grouped by prescription date
+    const prescriptionDatesMap = new Map<string, GroupedPrescription>();
+
+    healthCardData.forEach(item => {
+      // Handle blood tests
+      if (item.testdate && !testDatesMap.has(item.testdate)) {
+        testDatesMap.set(item.testdate, item);
+      }
+
+      // Handle prescriptions
+      if (item.prescriptiondate && item.medicationname) {
+        if (!prescriptionDatesMap.has(item.prescriptiondate)) {
+          prescriptionDatesMap.set(item.prescriptiondate, {
+            date: item.prescriptiondate,
+            medications: []
+          });
+        }
+
+        // Add medication to the prescription
+        prescriptionDatesMap.get(item.prescriptiondate)?.medications.push({
+          name: item.medicationname,
+          format: item.medicationformat,
+          dosage: item.medicationdosage,
+          usageinfo: item.usageinfo
+        });
+      }
+    });
+
+    // Convert maps to arrays
+    setGroupedData({
+      bloodTests: Array.from(testDatesMap.values()),
+      prescriptions: Array.from(prescriptionDatesMap.values())
+    });
+
+  }, [healthCardData]);
+
+  useEffect(() => {
+    // Only proceed if we have a patientId
+    if (!patientId) return;
+    
+    const fetchHealthCardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Ensure we have a valid patient ID and correctly format the URL
+        const apiUrl = `http://localhost:8000/api/get_health_card/${patientId}/`;
+        console.log(`Fetching health card data from: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl);
+        
+        if (response.status === 404) {
+          throw new Error("Health card data not found. The API endpoint may be incorrect or the patient ID is invalid.");
+        }
+        
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setHealthCardData(data.healthCard);
+          console.log("Successfully fetched health card data:", data.healthCard);
+        } else {
+          throw new Error(data.message || "Failed to fetch health card data");
+        }
+      } catch (err) {
+        console.error("Error fetching health card data:", err);
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load health card data. Please try again later.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHealthCardData();
+  }, [patientId, toast]);
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -32,131 +264,140 @@ export default function HealthCard() {
         <CardContent className="space-y-6">
           {/* Patient Information */}
           <div className="bg-cyan-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Patient Information:</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-600">Name:</span> Lorem
+                <span className="text-gray-600">Patient ID:</span> {patientId || "Loading..."}
               </div>
-              <div>
-                <span className="text-gray-600">Surname:</span> Ipsum
-              </div>
-              <div>
-                <span className="text-gray-600">Email:</span> loremipsum@gmail.com
-              </div>
-              <div>
-                <span className="text-gray-600">Phone no:</span> 56565656
-              </div>
+              {/* Other patient info would go here */}
             </div>
           </div>
 
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+              <p>Failed to load health card data: {error}</p>
+            </div>
+          )}
+
+          {/* No Data State */}
+          {!loading && !error && healthCardData.length === 0 && (
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
+              <p>No health card data available.</p>
+            </div>
+          )}
+
           {/* Blood Test Results */}
-          <Card>
-            <CardHeader className="bg-cyan-500 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-white">Blood Test</CardTitle>
-                  <p className="text-cyan-100 text-sm">xx/xx/xxxx</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-white text-cyan-600">
-                    Pending
-                  </Badge>
-                  <ChevronDown className="h-5 w-5" />
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
+          {!loading && !error && groupedData.bloodTests.map((test, index) => (
+            <Accordion key={`test-${index}`} type="single" collapsible className="w-full">
+              <AccordionItem value={`bloodtest-${index}`}>
+                <Card>
+                  <CardHeader className="bg-cyan-500 text-white p-4">
+                    <AccordionTrigger className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-white">Blood Test</CardTitle>
+                        <p className="text-cyan-100 text-sm">{test.testdate}</p>
+                      </div>
+                      <Badge variant="secondary" className="bg-white text-cyan-600">
+                        Available
+                      </Badge>
+                    </AccordionTrigger>
+                  </CardHeader>
+                  <AccordionContent>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-cyan-400 text-white">
+                            <TableHead className="text-white">Test</TableHead>
+                            <TableHead className="text-white">Value</TableHead>
+                            <TableHead className="text-white">Reference Range</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell>Cholesterol</TableCell>
+                            <TableCell>{test.cholesterol} mg/dL</TableCell>
+                            <TableCell>&lt; 200 mg/dL</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Glucose</TableCell>
+                            <TableCell>{test.glucose} mg/dL</TableCell>
+                            <TableCell>70-100 mg/dL</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Hemoglobin</TableCell>
+                            <TableCell>{test.hemoglobin} g/dL</TableCell>
+                            <TableCell>13.5-17.5 g/dL</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>White Blood Cells</TableCell>
+                            <TableCell>{test.whitebloodcell} K/uL</TableCell>
+                            <TableCell>4.5-11.0 K/uL</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Red Blood Cells</TableCell>
+                            <TableCell>{test.redbloodcell} M/uL</TableCell>
+                            <TableCell>4.5-5.9 M/uL</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+            </Accordion>
+          ))}
 
-          <Card>
-            <CardHeader className="bg-cyan-500 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-white">Blood Test</CardTitle>
-                  <p className="text-cyan-100 text-sm">xx/xx/xxxx</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-white text-cyan-600">
-                    Available
-                  </Badge>
-                  <ChevronDown className="h-5 w-5" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-cyan-400 text-white">
-                    <TableHead className="text-white">Type</TableHead>
-                    <TableHead className="text-white">Date</TableHead>
-                    <TableHead className="text-white">Status</TableHead>
-                    <TableHead className="text-white">Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bloodTestResults.map((result, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{result.name}</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>{result.value}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Prescriptions */}
-          <Card>
-            <CardHeader className="bg-cyan-500 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-white">Prescription</CardTitle>
-                  <p className="text-cyan-100 text-sm">xx/xx/xxxx</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-white text-cyan-600">
-                    Available
-                  </Badge>
-                  <ChevronDown className="h-5 w-5" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="grid grid-cols-2 gap-0">
-                <div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-cyan-400 text-white">
-                        <TableHead className="text-white">Name</TableHead>
-                        <TableHead className="text-white">Format</TableHead>
-                        <TableHead className="text-white">Dosage</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {prescriptions.map((prescription, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{prescription.name}</TableCell>
-                          <TableCell>{prescription.format}</TableCell>
-                          <TableCell>{prescription.dosage}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="bg-gray-50 p-4">
-                  <h4 className="font-semibold mb-2">Usage Info</h4>
-                  <p className="text-sm text-gray-600">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-                    labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris
-                    nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit
-                    esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt
-                    in culpa qui officia deserunt mollit anim id est laborum.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Prescriptions - Grouped by Date */}
+          {!loading && !error && groupedData.prescriptions.map((prescription, index) => (
+            <Accordion key={`prescription-${index}`} type="single" collapsible className="w-full">
+              <AccordionItem value={`prescription-${index}`}>
+                <Card>
+                  <CardHeader className="bg-cyan-500 text-white p-4">
+                    <AccordionTrigger className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-white">Prescription</CardTitle>
+                        <p className="text-cyan-100 text-sm">{prescription.date}</p>
+                      </div>
+                      <Badge variant="secondary" className="bg-white text-cyan-600">
+                        Available
+                      </Badge>
+                    </AccordionTrigger>
+                  </CardHeader>
+                  <AccordionContent>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-cyan-400 text-white">
+                            <TableHead className="text-white">Name</TableHead>
+                            <TableHead className="text-white">Format</TableHead>
+                            <TableHead className="text-white">Dosage</TableHead>
+                            <TableHead className="text-white">Usage Info</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {prescription.medications.map((med, medIndex) => (
+                            <TableRow key={`med-${medIndex}`}>
+                              <TableCell>{med.name}</TableCell>
+                              <TableCell>{med.format}</TableCell>
+                              <TableCell>{med.dosage}</TableCell>
+                              <TableCell>{med.usageinfo}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+            </Accordion>
+          ))}
         </CardContent>
       </Card>
     </div>

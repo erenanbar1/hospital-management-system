@@ -211,7 +211,7 @@ JSON BODY
 --------------------------------------
 --------------------------------------
 GET INVENTORY LIST
-http://localhost:8000//api/equipment/
+http://localhost:8000/api/equipment/
 
 METHOD: GET
 
