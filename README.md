@@ -35,19 +35,14 @@ A comprehensive web-based hospital management application built with React, Next
 
 1. Clone the repository:
 \`\`\`bash
-git clone https://github.com/yourusername/hospital-management-system.git
+git clone https://github.com/erenanbar1/hospital-management-system.git
 cd hospital-management-system
+cd frontend
 \`\`\`
 
-2. Install dependencies:
+3. Install dependencies:
 \`\`\`bash
 npm install
-\`\`\`
-
-3. Set up shadcn/ui components:
-\`\`\`bash
-npx shadcn@latest init
-npx shadcn@latest add button card input label select tabs dropdown-menu badge table
 \`\`\`
 
 4. Run the development server:
