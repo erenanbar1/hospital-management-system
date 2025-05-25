@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Heart, User, ChevronLeft, ChevronRight, Calendar } from "lucide-react"
+import { Heart, User, ChevronLeft, ChevronRight, Calendar, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -29,8 +29,11 @@ interface TimeSlot {
 }
 
 export default function BookAppointment() {
-  // Patient ID would normally come from auth context
-  const patientId = "U0001" // Example patient ID
+  // Get patient ID from localStorage
+  const [patientId, setPatientId] = useState<string | null>(null)
+  const [balance, setBalance] = useState<number | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
+  const [lastBalanceUpdate, setLastBalanceUpdate] = useState<Date | null>(null)
 
   const [selectedDepartment, setSelectedDepartment] = useState("")
   const [selectedDoctor, setSelectedDoctor] = useState("")
@@ -41,6 +44,63 @@ export default function BookAppointment() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
+
+  // Initialize patient ID from localStorage
+  useEffect(() => {
+    const storedPatientId = localStorage.getItem("userId") || localStorage.getItem("u_id")
+    if (storedPatientId) {
+      setPatientId(storedPatientId)
+    }
+  }, [])
+
+  // Fetch patient balance
+  const fetchBalance = async () => {
+    if (!patientId) return
+    
+    setBalanceLoading(true)
+    try {
+      const response = await fetch(`http://localhost:8000/api/get_patient_balance/${patientId}/`)
+      const data = await response.json()
+
+      if (data.success) {
+        setBalance(data.balance)
+        setLastBalanceUpdate(new Date())
+      } else {
+        setError("Failed to fetch balance: " + data.message)
+      }
+    } catch (err) {
+      setError("Error fetching balance: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setBalanceLoading(false)
+    }
+  }
+
+  // Fetch balance when patient ID is available
+  useEffect(() => {
+    if (patientId) {
+      fetchBalance()
+    }
+  }, [patientId])
+
+  // Auto-refresh balance every 30 seconds
+  useEffect(() => {
+    if (!patientId) return
+    
+    const interval = setInterval(fetchBalance, 30000)
+    return () => clearInterval(interval)
+  }, [patientId])
+
+  // Refresh balance when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && patientId) {
+        fetchBalance()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [patientId])
 
   // Get month name
   const getMonthName = () => {
@@ -161,7 +221,7 @@ export default function BookAppointment() {
 
   // Handle appointment booking
   const handleBookAppointment = () => {
-    if (!selectedDoctor || !selectedTimeSlot) {
+    if (!selectedDoctor || !selectedTimeSlot || !patientId) {
       setError("Please select a doctor and time slot")
       return
     }
@@ -190,6 +250,8 @@ export default function BookAppointment() {
           setSelectedTimeSlot("")
           // Refresh available time slots
           fetchAvailableTimeSlots(selectedDoctor, selectedDate)
+          // Refresh balance after successful booking
+          fetchBalance()
         } else {
           setError(data.message || "Failed to book appointment")
         }
@@ -205,6 +267,17 @@ export default function BookAppointment() {
   // Format time for display (convert "00:00:00" to "00:00")
   const formatTime = (time: string) => {
     return time.substring(0, 5)
+  }
+
+  // Get selected doctor's price
+  const getSelectedDoctorPrice = (): number => {
+    const doctor = doctors.find(d => d.doctor_id === selectedDoctor)
+    return doctor?.price || 0
+  }
+
+  // Format price for display
+  const formatPrice = (price: number): string => {
+    return Number(price).toFixed(2)
   }
 
   // Generate calendar days with proper offset for first day of month
@@ -228,10 +301,42 @@ export default function BookAppointment() {
       <div className="max-w-4xl mx-auto p-6">
         <Card className="bg-white/90 backdrop-blur-sm">
           <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Calendar className="h-6 w-6" />
-              <h2 className="text-xl font-bold">Book an Appointment</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-6 w-6" />
+                <h2 className="text-xl font-bold">Book an Appointment</h2>
+              </div>
+              
+              {/* Balance Display */}
+              <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg">
+                <div className="text-sm">
+                  <span className="text-gray-600">Balance: </span>
+                  <span className="font-bold text-green-600">
+                    {balanceLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin inline" />
+                    ) : balance !== null ? (
+                      `$${formatPrice(balance)}`
+                    ) : (
+                      "Loading..."
+                    )}
+                  </span>
+                </div>
+                <button
+                  onClick={fetchBalance}
+                  disabled={balanceLoading}
+                  className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                  title="Refresh balance"
+                >
+                  <RefreshCw className={`h-4 w-4 ${balanceLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
+            
+            {lastBalanceUpdate && (
+              <div className="text-xs text-gray-500 mb-4 text-right">
+                Last updated: {lastBalanceUpdate.toLocaleTimeString()}
+              </div>
+            )}
 
             {successMessage && (
               <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
@@ -432,20 +537,41 @@ export default function BookAppointment() {
                           : "Not selected"}
                       </p>
                     </div>
+
+                    {selectedDoctor && (
+                      <div>
+                        <p className="text-sm text-gray-500">Price</p>
+                        <p className="font-medium text-green-600">
+                          ${formatPrice(getSelectedDoctorPrice())}
+                        </p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Balance validation warning */}
+                  {selectedDoctor && balance !== null && balance < getSelectedDoctorPrice() && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-600">
+                        ⚠️ Insufficient balance. You need ${formatPrice(getSelectedDoctorPrice() - balance)} more to book this appointment.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-6">
                     <button
                       className={`
                         w-full py-2 px-4 rounded-md text-white font-medium
-                        ${(!selectedDoctor || !selectedTimeSlot || loading)
+                        ${(!selectedDoctor || !selectedTimeSlot || loading || !patientId || (balance !== null && balance < getSelectedDoctorPrice()))
                           ? 'bg-blue-300 cursor-not-allowed'
                           : 'bg-blue-500 hover:bg-blue-600'}
                       `}
-                      disabled={!selectedDoctor || !selectedTimeSlot || loading}
+                      disabled={!selectedDoctor || !selectedTimeSlot || loading || !patientId || (balance !== null && balance < getSelectedDoctorPrice())}
                       onClick={handleBookAppointment}
                     >
-                      {loading ? "Processing..." : "Book Appointment"}
+                      {loading ? "Processing..." : 
+                       !patientId ? "Please login" :
+                       (balance !== null && balance < getSelectedDoctorPrice()) ? "Insufficient Balance" :
+                       "Book Appointment"}
                     </button>
                   </div>
                 </div>

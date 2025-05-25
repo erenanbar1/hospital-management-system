@@ -142,6 +142,8 @@ JSON RETURN BODY
         }
     ]
 }
+--------------------------------------
+--------------------------------------
 LIST AVAILABLE TIMESLOTS OF DOCTOR ENDPOINT
 http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=U0006&date=2024-12-01
 
@@ -205,6 +207,49 @@ JSON BODY
     "hemoglobin": "55.3",
     "whiteBC": "3.6",
     "redBC": "3.64"
+}
+--------------------------------------
+--------------------------------------
+GET INVENTORY LIST
+http://localhost:8000//api/equipment/
+
+METHOD: GET
+
+JSON RETURN BODY
+{
+    "success": true,
+    "equipment": [
+        {
+            "id": "ME003",
+            "name": "Gloves",
+            "format": "Box",
+            "amount": "50"
+        },
+        {
+            "id": "ME002",
+            "name": "Stethoscope",
+            "format": "Piece",
+            "amount": "20"
+        },
+        {
+            "id": "ME001",
+            "name": "Syringe",
+            "format": "Piece",
+            "amount": "100"
+        }
+    ]
+}
+--------------------------------------
+--------------------------------------
+UPDATE INVENTORY ITEM VALUE STATUS
+http://localhost:8000/api/equipment/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+    "equipment": "ME002",
+    "amount": "19"
 }
 --------------------------------------
 --------------------------------------

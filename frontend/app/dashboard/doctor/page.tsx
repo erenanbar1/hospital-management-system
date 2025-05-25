@@ -14,12 +14,21 @@ interface TimeSlot {
   end_time: string
 }
 
+interface DoctorAppointment {
+  patient_name: string;
+  date: string;
+  starttime?: string;  // Alternative property names from API
+  endtime?: string;
+}
+
 export default function DoctorDashboard() {
   const router = useRouter()
   const { userId, userRole } = useUser()
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [doctorAppointments, setDoctorAppointments] = useState<DoctorAppointment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false);
 
   // Redirect non-doctors or unauthenticated users
   useEffect(() => {
@@ -34,6 +43,7 @@ export default function DoctorDashboard() {
     const doctorId = userId || 'U0006'
     if (selectedDate) {
       fetchAvailableSlots(doctorId)
+      fetchDoctorAppointments(doctorId);
     }
   }, [selectedDate, userId])
 
@@ -60,6 +70,23 @@ export default function DoctorDashboard() {
     }
   }
 
+  const fetchDoctorAppointments = async (docId: string) => {
+    try {
+      setLoadingAppointments(true);
+      const response = await axios.get<{ success: boolean; appointments: DoctorAppointment[] }>(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/get_doctor_appointments/${docId}/`
+      );
+
+      if (response.data.success) {
+        setDoctorAppointments(response.data.appointments);
+      }
+    } catch (error) {
+      console.error('Error fetching doctor appointments:', error);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
   const handleDateSelect = (date: string) => {
     console.log('Date selected:', date)
     setSelectedDate(date)
@@ -85,7 +112,7 @@ export default function DoctorDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-6 w-6" />
-            Doctor Schedule {userId ? `(${userId})` : '(Demo Mode)'}
+            Doctor Schedule {userId && `(${userId})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -99,7 +126,7 @@ export default function DoctorDashboard() {
             <div className="lg:col-span-2">
               <h3 className="font-medium mb-4">
                 Daily Schedule - {formatDisplayDate(selectedDate)}
-                <span className="text-sm text-gray-500 ml-2">(8:00 AM - 5:00 PM)</span>
+                <span className="text-sm text-gray-500 ml-2">(8:00 AM - 1:00 PM)</span>
                 {availableSlots.length > 0 && (
                   <span className="text-sm text-green-500 ml-2">
                     ({availableSlots.length} available slots)
@@ -110,10 +137,10 @@ export default function DoctorDashboard() {
               {isLoading ? (
                 <div className="text-center py-10">Loading schedule...</div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Generate time slots from 8:00 AM to 5:00 PM (17:00) */}
-                  {Array.from({ length: 18 }).map((_, index) => {
-                    // IMPORTANT: Start from TS001, TS002, etc. to match the API
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {/* Generate only 10 time slots from 8:00 AM to 12:30 PM */}
+                  {Array.from({ length: 10 }).map((_, index) => {
+                    // Start from TS001, TS002, etc. to match the API
                     const slotNumber = index + 1
                     const tsId = `TS${String(slotNumber).padStart(3, '0')}`
 
@@ -135,18 +162,26 @@ export default function DoctorDashboard() {
                     return (
                       <div
                         key={tsId}
-                        className={`p-3 rounded-lg ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
-                          } text-white text-sm transition-colors cursor-pointer`}
+                        className={`
+                          p-4 rounded-lg border shadow-sm
+                          ${isAvailable
+                            ? 'bg-green-50 border-green-200 hover:bg-green-100'
+                            : 'bg-red-50 border-red-200'
+                          } 
+                          transition-colors cursor-pointer
+                        `}
                         title={`Time Slot: ${tsId}`}
                       >
-                        <div className="font-medium">
+                        <div className="flex justify-center items-center mb-2">
+                          <span className={`text-xs px-2 py-1 rounded-full ${isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                            {isAvailable ? 'Available' : 'Unavailable'}
+                          </span>
+                        </div>
+                        <div className="font-medium text-center">
                           {formatTime(startHour, startMin)}
-                        </div>
-                        <div className="text-xs opacity-90">
-                          to {formatTime(endHour, endMin)}
-                        </div>
-                        <div className="text-xs mt-1 opacity-75">
-                          {tsId}
+                          <span className="mx-1">-</span>
+                          {formatTime(endHour, endMin)}
                         </div>
                       </div>
                     )
@@ -154,6 +189,70 @@ export default function DoctorDashboard() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Upcoming Appointments Section */}
+          <div className="mt-8 pt-6 border-t">
+            <h3 className="font-semibold text-lg mb-4">Upcoming Appointments</h3>
+
+            {loadingAppointments ? (
+              <div className="text-center py-6">Loading appointments...</div>
+            ) : doctorAppointments.length > 0 ? (
+              <div className="bg-white rounded-md shadow overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Patient
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Time
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {doctorAppointments.map((appointment, index) => {
+                      // Format the date for display
+                      const appointmentDate = new Date(appointment.date);
+                      const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      });
+
+                      // Format the time - check both possible property names
+                      const startTime = appointment.starttime || appointment.starttime || 'N/A';
+                      const endTime = appointment.endtime || appointment.endtime || 'N/A';
+
+                      // Only take the hours and minutes (HH:MM) part if it exists
+                      const formattedStartTime = startTime !== 'N/A' ? startTime.substring(0, 5) : 'N/A';
+                      const formattedEndTime = endTime !== 'N/A' ? endTime.substring(0, 5) : 'N/A';
+
+                      return (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-medium text-gray-900">{appointment.patient_name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            {formattedDate}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            {formattedStartTime} - {formattedEndTime}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-10 bg-gray-50 rounded-md">
+                <p className="text-gray-500">No upcoming appointments found.</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
