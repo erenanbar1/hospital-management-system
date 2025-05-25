@@ -41,13 +41,13 @@ export default function DoctorDashboard() {
     try {
       setIsLoading(true)
       console.log(`Fetching slots for doctor: ${docId}, date: ${selectedDate}`)
-      
+
       const response = await axios.get<{ success: boolean; timeslots: TimeSlot[] }>(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/list_available_timeslots_of_doctor/?doc_id=${docId}&date=${selectedDate}`
       )
-      
+
       console.log('API response:', response.data)
-      
+
       if (response.data.success) {
         const availableTsIds = response.data.timeslots.map(slot => slot.ts_id)
         setAvailableSlots(availableTsIds)
@@ -69,16 +69,16 @@ export default function DoctorDashboard() {
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return "No date selected"
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
   }
 
   // Remove the conditional return for no userId
   // Instead, we'll use a fallback ID for demo/testing purposes
-  
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Card className="bg-white/90 backdrop-blur-sm">
@@ -106,7 +106,7 @@ export default function DoctorDashboard() {
                   </span>
                 )}
               </h3>
-              
+
               {isLoading ? (
                 <div className="text-center py-10">Loading schedule...</div>
               ) : (
@@ -116,28 +116,27 @@ export default function DoctorDashboard() {
                     // IMPORTANT: Start from TS001, TS002, etc. to match the API
                     const slotNumber = index + 1
                     const tsId = `TS${String(slotNumber).padStart(3, '0')}`
-                    
+
                     // Calculate time display - start at 8:00 AM
                     const startHour = Math.floor((index + 16) / 2)
                     const startMin = (index + 16) % 2 === 0 ? "00" : "30"
                     const endHour = Math.floor((index + 17) / 2)
                     const endMin = (index + 17) % 2 === 0 ? "00" : "30"
-                    
+
                     // Format for 12-hour display
                     const formatTime = (hour: number, min: string) => {
                       const period = hour >= 12 ? 'PM' : 'AM'
                       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
                       return `${displayHour}:${min} ${period}`
                     }
-                    
+
                     const isAvailable = availableSlots.includes(tsId)
-                    
+
                     return (
                       <div
                         key={tsId}
-                        className={`p-3 rounded-lg ${
-                          isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
-                        } text-white text-sm transition-colors cursor-pointer`}
+                        className={`p-3 rounded-lg ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
+                          } text-white text-sm transition-colors cursor-pointer`}
                         title={`Time Slot: ${tsId}`}
                       >
                         <div className="font-medium">

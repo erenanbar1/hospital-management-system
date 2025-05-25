@@ -37,8 +37,12 @@ export function DoctorScheduleCalendar({ userId, onDateSelect }: DoctorScheduleC
     const newSelectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
     setSelectedDate(newSelectedDate)
     
-    // Format as YYYY-MM-DD for API consistency
-    const formattedDate = newSelectedDate.toISOString().split('T')[0]
+    // Format as YYYY-MM-DD and account for timezone offset
+    const year = newSelectedDate.getFullYear();
+    const month = String(newSelectedDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${dayStr}`;
+    
     onDateSelect(formattedDate)
   }
 
