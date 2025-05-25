@@ -116,7 +116,13 @@ export function DoctorScheduleCalendar({
     date.setDate(day)
     // Set the selected day when formatting date
     setSelectedDay(day)
-    return date.toISOString().split('T')[0]
+    
+    // Fix: Use local date formatting to avoid timezone issues
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const dayStr = String(day).padStart(2, '0')
+    
+    return `${year}-${month}-${dayStr}`
   }
 
   return (

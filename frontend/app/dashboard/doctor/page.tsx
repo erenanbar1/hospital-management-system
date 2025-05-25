@@ -51,20 +51,20 @@ export default function DoctorDashboard() {
   const [doctorAppointments, setDoctorAppointments] = useState<DoctorAppointment[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false)
-  
+
   // Inventory state
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [loadingInventory, setLoadingInventory] = useState<boolean>(false)
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [inventoryError, setInventoryError] = useState<string>("")
-  
+
   // Unavailability declaration state
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [declareLoading, setDeclareLoading] = useState(false)
   const [declareError, setDeclareError] = useState<string>("")
   const [declareSuccess, setDeclareSuccess] = useState<string>("")
-  
+
   // Redirect non-doctors or unauthenticated users
   useEffect(() => {
     if (userRole && userRole !== "doctor") {
@@ -93,9 +93,9 @@ export default function DoctorDashboard() {
     const handleScrollToInventory = () => {
       inventoryRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-    
+
     document.addEventListener('scrollToInventory', handleScrollToInventory)
-    
+
     // Clean up
     return () => {
       document.removeEventListener('scrollToInventory', handleScrollToInventory)
@@ -161,12 +161,12 @@ export default function DoctorDashboard() {
     try {
       setLoadingInventory(true);
       setInventoryError("");
-      
+
       // Use a simple direct URL here for testing
       const apiUrl = "http://localhost:8000/api/equipment/";
-      
+
       console.log("Fetching inventory from:", apiUrl);
-      
+
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -174,14 +174,14 @@ export default function DoctorDashboard() {
           'Accept': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       console.log("Full API response:", data);
-      
+
       if (data && data.success) {
         setInventoryItems(data.equipment);
         console.log("Successfully loaded inventory from API:", data.equipment);
@@ -191,7 +191,7 @@ export default function DoctorDashboard() {
     } catch (error) {
       console.error("Error fetching inventory:", error);
       setInventoryError(`Failed to load inventory: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
+
       // Fall back to mock data
       console.log("Using mock inventory data as fallback");
       setInventoryItems([
@@ -206,14 +206,14 @@ export default function DoctorDashboard() {
 
   const declareUnavailability = async () => {
     if (!selectedSlot) return
-    
+
     setDeclareLoading(true)
     setDeclareError("")
     setDeclareSuccess("")
-    
+
     try {
       const doctorId = userId || 'U0006'
-      
+
       const response = await fetch("http://localhost:8000/api/doctor_declare_unavailability/", {
         method: "POST",
         headers: {
@@ -225,9 +225,9 @@ export default function DoctorDashboard() {
           date: selectedDate,
         }),
       })
-      
+
       const data = await response.json()
-      
+
       if (data.success) {
         setDeclareSuccess(`Successfully marked as unavailable. (ID: ${data.ua_id})`)
         // Refresh the schedule to reflect the changes
@@ -253,35 +253,33 @@ export default function DoctorDashboard() {
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return "No date selected"
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
   }
 
-  // Add a function to get the time interval display for a time slot ID
   const getTimeIntervalForSlot = (tsId: string): string => {
     // Extract the number from the TS format
     const slotNumber = parseInt(tsId.replace('TS', ''), 10);
-    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 18) {
+    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 10) {
       return 'Unknown time';
     }
-    
-    // Calculate time display - start at 8:00 AM
-    const index = slotNumber - 1;
-    const startHour = Math.floor((index + 16) / 2);
-    const startMin = (index + 16) % 2 === 0 ? "00" : "30";
-    const endHour = Math.floor((index + 17) / 2);
-    const endMin = (index + 17) % 2 === 0 ? "00" : "30";
-    
+
+    // Calculate time display for 10 slots between 8:00 AM and 1:00 PM
+    const startHour = 8 + Math.floor((slotNumber - 1) / 2);
+    const startMin = (slotNumber - 1) % 2 === 0 ? "00" : "30";
+    const endHour = startHour + ((startMin === "30") ? 1 : 0);
+    const endMin = startMin === "00" ? "30" : "00";
+
     // Format for 12-hour display
     const formatTime = (hour: number, min: string) => {
       const period = hour >= 12 ? 'PM' : 'AM';
       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
       return `${displayHour}:${min} ${period}`;
     };
-    
+
     return `${formatTime(startHour, startMin)} to ${formatTime(endHour, endMin)}`;
   };
 
@@ -291,12 +289,12 @@ export default function DoctorDashboard() {
     item.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // First, let's add a function to fetch the doctor appointments separately
+
   const fetchUpcomingAppointments = async (doctorId: string) => {
     try {
       const response = await fetch(`http://localhost:8000/api/get_doctor_appointments/${doctorId}/`);
       const data = await response.json();
-      
+
       if (data.success && data.appointments) {
         // Sort appointments by date
         const sortedAppointments = [...data.appointments].sort((a, b) => {
@@ -304,14 +302,14 @@ export default function DoctorDashboard() {
           const dateB = new Date(`${b.date}T${b.startTime || b.starttime}`);
           return dateA.getTime() - dateB.getTime();
         });
-        
+
         // Update state with the appointments
         setDoctorAppointments(sortedAppointments);
       } else {
         console.error("Failed to fetch doctor appointments");
         setDoctorAppointments([]);
       }
-      
+
     } catch (error) {
       console.error("Error fetching doctor appointments:", error);
       setDoctorAppointments([]);
@@ -320,7 +318,6 @@ export default function DoctorDashboard() {
     }
   };
 
-  // Add this useEffect to fetch appointments when the component mounts
   useEffect(() => {
     const doctorId = userId || 'U0006';
     setLoadingAppointments(true);
@@ -343,59 +340,55 @@ export default function DoctorDashboard() {
               userId={userId || 'U0006'}
               onDateSelect={handleDateSelect}
               appointments={doctorAppointments}
-              hideAppointmentLegend={true}  // Add this new prop
+              hideAppointmentLegend={true}
             />
 
             {/* Time Slots Display */}
             <div className="lg:col-span-2">
               <h3 className="font-medium mb-4">
                 Daily Schedule - {formatDisplayDate(selectedDate)}
-                <span className="text-sm text-gray-500 ml-2">(8:00 AM - 5:00 PM)</span>
+                <span className="text-sm text-gray-500 ml-2">(8:00 AM - 1:00 PM)</span>
                 {availableSlots.length > 0 && (
                   <span className="text-sm text-green-500 ml-2">
                     ({availableSlots.length} available slots)
                   </span>
                 )}
               </h3>
-              
+
               {isLoading ? (
                 <div className="text-center py-10">Loading schedule...</div>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
                   {/* Time slots rendering code */}
-                  {Array.from({ length: 18 }).map((_, index) => {
-                    // IMPORTANT: Start from TS001, TS002, etc. to match the API
+                  {Array.from({ length: 10 }).map((_, index) => {
                     const slotNumber = index + 1
                     const tsId = `TS${String(slotNumber).padStart(3, '0')}`
-                    
-                    // Calculate time display - start at 8:00 AM
-                    const startHour = Math.floor((index + 16) / 2)
-                    const startMin = (index + 16) % 2 === 0 ? "00" : "30"
-                    const endHour = Math.floor((index + 17) / 2)
-                    const endMin = (index + 17) % 2 === 0 ? "00" : "30"
-                    
-                    // Format for 12-hour display
+
+                    const startHour = 8 + Math.floor(index / 2)
+                    const startMin = index % 2 === 0 ? "00" : "30"
+                    const endHour = startHour + (startMin === "30" ? 1 : 0)
+                    const endMin = startMin === "00" ? "30" : "00"
+
                     const formatTime = (hour: number, min: string) => {
                       const period = hour >= 12 ? 'PM' : 'AM'
                       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
                       return `${displayHour}:${min} ${period}`
                     }
-                    
+
                     const isAvailable = availableSlots.includes(tsId)
-                    
+
                     const handleSlotClick = () => {
                       if (isAvailable) {
                         setSelectedSlot(tsId)
                         setConfirmDialogOpen(true)
                       }
                     }
-                    
+
                     return (
                       <div
                         key={tsId}
-                        className={`p-3 rounded-lg ${
-                          isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
-                        } text-white text-sm transition-colors cursor-pointer`}
+                        className={`p-3 rounded-lg ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
+                          } text-white text-sm transition-colors cursor-pointer`}
                         title={`Time Slot: ${tsId}`}
                         onClick={handleSlotClick}
                       >
@@ -404,9 +397,6 @@ export default function DoctorDashboard() {
                         </div>
                         <div className="text-xs opacity-90">
                           to {formatTime(endHour, endMin)}
-                        </div>
-                        <div className="text-xs mt-1 opacity-75">
-                          {tsId}
                         </div>
                       </div>
                     )
@@ -443,11 +433,11 @@ export default function DoctorDashboard() {
                   month: 'long',
                   day: 'numeric'
                 }).format(appointmentDate);
-                
+
                 // Format time for display - handle both startTime and starttime formats
                 const startTime = appointment.starttime || '';
                 const endTime = appointment.endtime || '';
-                
+
                 interface FormatTimeFn {
                   (timeString: string | undefined): string;
                 }
@@ -461,20 +451,19 @@ export default function DoctorDashboard() {
                   const hour12 = hour % 12 || 12;
                   return `${hour12}:${minutes} ${ampm}`;
                 };
-                
+
                 const isToday = new Date().toDateString() === appointmentDate.toDateString();
                 const isPast = appointmentDate < new Date();
-                
+
                 return (
-                  <div 
+                  <div
                     key={`${appointment.patient_name}-${appointment.date}-${startTime}`}
-                    className={`p-4 rounded-lg border ${
-                      isToday 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : isPast 
-                          ? 'border-gray-200 bg-gray-50 opacity-75' 
-                          : 'border-green-200 bg-green-50'
-                    }`}
+                    className={`p-4 rounded-lg border ${isToday
+                      ? 'border-blue-500 bg-blue-50'
+                      : isPast
+                        ? 'border-gray-200 bg-gray-50 opacity-75'
+                        : 'border-green-200 bg-green-50'
+                      }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -505,7 +494,7 @@ export default function DoctorDashboard() {
           )}
         </CardContent>
       </Card>
-      
+
       {/* Hospital Inventory Card */}
       <Card className="bg-white/90 backdrop-blur-sm" ref={inventoryRef}>
         <CardHeader>
@@ -519,17 +508,17 @@ export default function DoctorDashboard() {
             <div className="flex items-center mb-6 gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <Input 
-                  placeholder="Search inventory items..." 
+                <Input
+                  placeholder="Search inventory items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchInventoryItems} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchInventoryItems}
                 disabled={loadingInventory}
               >
                 Refresh
@@ -540,9 +529,9 @@ export default function DoctorDashboard() {
               <Alert variant="destructive" className="mb-4 flex items-center">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="ml-2 flex-1">{inventoryError}</AlertDescription>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={fetchInventoryItems}
                   className="ml-auto text-xs"
                 >
@@ -550,7 +539,7 @@ export default function DoctorDashboard() {
                 </Button>
               </Alert>
             )}
-            
+
             {loadingInventory ? (
               <div className="text-center py-10">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-500 border-t-transparent"></div>
@@ -576,8 +565,8 @@ export default function DoctorDashboard() {
                           <td className="p-3">{item.format}</td>
                           <td className="p-3">
                             <Badge variant={
-                              parseInt(item.amount) > 20 
-                                ? 'success' 
+                              parseInt(item.amount) > 20
+                                ? 'success'
                                 : parseInt(item.amount) > 5
                                   ? 'warning'
                                   : 'destructive'
@@ -590,8 +579,8 @@ export default function DoctorDashboard() {
                     ) : (
                       <tr>
                         <td colSpan={3} className="text-center py-10 text-gray-500">
-                          {searchTerm 
-                            ? "No inventory items match your search." 
+                          {searchTerm
+                            ? "No inventory items match your search."
                             : "No inventory items available."}
                         </td>
                       </tr>
@@ -613,7 +602,7 @@ export default function DoctorDashboard() {
               Are you sure you want to mark this time slot as unavailable?
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="bg-gray-50 rounded-md p-3 mb-4">
               <p><strong>Date:</strong> {formatDisplayDate(selectedDate)}</p>
@@ -621,17 +610,17 @@ export default function DoctorDashboard() {
                 <p><strong>Time Slot:</strong> {getTimeIntervalForSlot(selectedSlot)}</p>
               )}
             </div>
-            
+
             {declareError && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
                 {declareError}
               </div>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button
-              variant="outline" 
+              variant="outline"
               onClick={() => setConfirmDialogOpen(false)}
               disabled={declareLoading}
             >
@@ -660,8 +649,8 @@ export default function DoctorDashboard() {
       {declareSuccess && (
         <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-md shadow-lg flex items-center max-w-md">
           <span>{declareSuccess}</span>
-          <button 
-            onClick={() => setDeclareSuccess("")} 
+          <button
+            onClick={() => setDeclareSuccess("")}
             className="ml-4 text-white hover:text-green-200"
           >
             <X size={18} />
