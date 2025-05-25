@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import uuid
-import hashlib
 import psycopg2
 
 import personalSettings
@@ -14,10 +13,6 @@ SQL_PATH = os.path.abspath(
 def generate_id() -> str:
     """Return a 5-character uppercase unique ID."""
     return uuid.uuid4().hex[:5].upper()
-
-def hash_password(password: str) -> str:
-    """Hash the password with SHA-256."""
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 def register(
     name: str,
@@ -33,7 +28,7 @@ def register(
     """
     u_id  = generate_id()
     hc_id = generate_id()
-    pwd_hash = hash_password(password)
+    pwd = password  # No hashing
 
     # Read the SQL template
     with open(SQL_PATH, 'r') as f:
@@ -54,7 +49,7 @@ def register(
                     'name':     name,
                     'surname':  surname,
                     'email':    email,
-                    'password': pwd_hash,
+                    'password': pwd,
                     'phone':    phone,
                     'hc_id':    hc_id,
                 })

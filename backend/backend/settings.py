@@ -11,14 +11,13 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
-<<<<<<< Updated upstream
-=======
 import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql_scripts')))
+from login import login as login_func
 
 # Add the parent directory to sys.path to import personalSettings
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
->>>>>>> Stashed changes
 import personalSettings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

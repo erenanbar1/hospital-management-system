@@ -1,0 +1,22 @@
+LOGIN ENDPOINT
+http://localhost:8000/api/login/
+
+JSON BODY
+{
+  "email": "ma@example.com",
+  "password": "ma"
+}
+------------------------------------
+------------------------------------
+REGISTRATION ENDPOINT
+http://localhost:8000/api/register/
+
+JSON BODY
+{
+  "name": "ma",
+  "surname": "am",
+  "email": "ma@example.com",
+  "password": "ma",
+  "phone": "5551234567"
+}
+--------------------------------------

@@ -14,6 +14,9 @@ def login(email: str, password: str):
     Attempts login; returns (u_id, role) on success or None on failure.
     Raises exceptions on connectivity errors.
     """
+    # Do NOT hash the password before querying
+    pwd = password
+
     # Read the SQL template
     with open(SQL_PATH, 'r') as f:
         query = f.read()
@@ -28,7 +31,7 @@ def login(email: str, password: str):
     try:
         with conn.cursor() as cur:
             # parameters repeated 4× for each UNION block
-            cur.execute(query, (email, password) * 4)
+            cur.execute(query, (email, pwd) * 4)
             return cur.fetchone()  # (u_id, role) or None
     finally:
         conn.close()
