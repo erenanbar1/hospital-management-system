@@ -118,7 +118,6 @@ JSON RETURN BODY
 }
 --------------------------------------
 --------------------------------------
-<<<<<<< Updated upstream
 REQUEST PATIENT HEALTH CARD ENDPOINT
 http://localhost:8000//api/get_health_card/<str:patient_id>/
 
@@ -143,7 +142,6 @@ JSON RETURN BODY
         }
     ]
 }
-=======
 LIST AVAILABLE TIMESLOTS OF DOCTOR ENDPOINT
 http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=U0006&date=2024-12-01
 
@@ -206,4 +204,22 @@ UPDATE INVENTORY ITEM VALUE STATUS
 
 
 --------------------------------------
+--------------------------------------
+--------------------------------------
+ADD BLOOD TEST ENDPOINT
+http://localhost:8000//api/create_blood_test/
+
+METHOD: POST
+
+JSON BODY
+{
+    "patient_id": "U0001",
+    "vitamins": "Vitamin A: a ok",
+    "minerals": "Na: 2, P: 2",
+    "cholesterol": "13.4",
+    "glucose": "3.2",
+    "hemoglobin": "55.3",
+    "whiteBC": "3.6",
+    "redBC": "3.64"
+}
 --------------------------------------
