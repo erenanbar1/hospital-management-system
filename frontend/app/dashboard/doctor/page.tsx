@@ -1,8 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Package, Search, AlertCircle } from "lucide-react"
+import { Calendar, Package, Search, AlertCircle, X } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { DoctorScheduleCalendar } from "@/components/DoctorScheduleCalendar"
 import { useUser } from "@/lib/hooks/useUser"
 import axios from "axios"
@@ -49,6 +57,13 @@ export default function DoctorDashboard() {
   const [loadingInventory, setLoadingInventory] = useState<boolean>(false)
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [inventoryError, setInventoryError] = useState<string>("")
+  
+  // Unavailability declaration state
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [declareLoading, setDeclareLoading] = useState(false)
+  const [declareError, setDeclareError] = useState<string>("")
+  const [declareSuccess, setDeclareSuccess] = useState<string>("")
   
   // Redirect non-doctors or unauthenticated users
   useEffect(() => {
@@ -189,6 +204,46 @@ export default function DoctorDashboard() {
     }
   };
 
+  const declareUnavailability = async () => {
+    if (!selectedSlot) return
+    
+    setDeclareLoading(true)
+    setDeclareError("")
+    setDeclareSuccess("")
+    
+    try {
+      const doctorId = userId || 'U0006'
+      
+      const response = await fetch("http://localhost:8000/api/doctor_declare_unavailability/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ts_id: selectedSlot,
+          doc_id: doctorId,
+          date: selectedDate,
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setDeclareSuccess(`Successfully marked as unavailable. (ID: ${data.ua_id})`)
+        // Refresh the schedule to reflect the changes
+        fetchAvailableSlots(doctorId)
+        setConfirmDialogOpen(false)
+      } else {
+        setDeclareError(data.message || "Failed to mark as unavailable")
+      }
+    } catch (error) {
+      console.error("Error declaring unavailability:", error)
+      setDeclareError("An error occurred while marking unavailability")
+    } finally {
+      setDeclareLoading(false)
+    }
+  }
+
   const handleDateSelect = (date: string) => {
     console.log('Date selected:', date)
     setSelectedDate(date)
@@ -205,11 +260,72 @@ export default function DoctorDashboard() {
     })
   }
 
+  // Add a function to get the time interval display for a time slot ID
+  const getTimeIntervalForSlot = (tsId: string): string => {
+    // Extract the number from the TS format
+    const slotNumber = parseInt(tsId.replace('TS', ''), 10);
+    if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 18) {
+      return 'Unknown time';
+    }
+    
+    // Calculate time display - start at 8:00 AM
+    const index = slotNumber - 1;
+    const startHour = Math.floor((index + 16) / 2);
+    const startMin = (index + 16) % 2 === 0 ? "00" : "30";
+    const endHour = Math.floor((index + 17) / 2);
+    const endMin = (index + 17) % 2 === 0 ? "00" : "30";
+    
+    // Format for 12-hour display
+    const formatTime = (hour: number, min: string) => {
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${displayHour}:${min} ${period}`;
+    };
+    
+    return `${formatTime(startHour, startMin)} to ${formatTime(endHour, endMin)}`;
+  };
+
   // Filter inventory items based on search term
   const filteredInventoryItems = inventoryItems.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // First, let's add a function to fetch the doctor appointments separately
+  const fetchUpcomingAppointments = async (doctorId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/get_doctor_appointments/${doctorId}/`);
+      const data = await response.json();
+      
+      if (data.success && data.appointments) {
+        // Sort appointments by date
+        const sortedAppointments = [...data.appointments].sort((a, b) => {
+          const dateA = new Date(`${a.date}T${a.startTime || a.starttime}`);
+          const dateB = new Date(`${b.date}T${b.startTime || b.starttime}`);
+          return dateA.getTime() - dateB.getTime();
+        });
+        
+        // Update state with the appointments
+        setDoctorAppointments(sortedAppointments);
+      } else {
+        console.error("Failed to fetch doctor appointments");
+        setDoctorAppointments([]);
+      }
+      
+    } catch (error) {
+      console.error("Error fetching doctor appointments:", error);
+      setDoctorAppointments([]);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  // Add this useEffect to fetch appointments when the component mounts
+  useEffect(() => {
+    const doctorId = userId || 'U0006';
+    setLoadingAppointments(true);
+    fetchUpcomingAppointments(doctorId);
+  }, [userId]); // Re-fetch when userId changes
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -227,6 +343,7 @@ export default function DoctorDashboard() {
               userId={userId || 'U0006'}
               onDateSelect={handleDateSelect}
               appointments={doctorAppointments}
+              hideAppointmentLegend={true}  // Add this new prop
             />
 
             {/* Time Slots Display */}
@@ -266,6 +383,13 @@ export default function DoctorDashboard() {
                     
                     const isAvailable = availableSlots.includes(tsId)
                     
+                    const handleSlotClick = () => {
+                      if (isAvailable) {
+                        setSelectedSlot(tsId)
+                        setConfirmDialogOpen(true)
+                      }
+                    }
+                    
                     return (
                       <div
                         key={tsId}
@@ -273,6 +397,7 @@ export default function DoctorDashboard() {
                           isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
                         } text-white text-sm transition-colors cursor-pointer`}
                         title={`Time Slot: ${tsId}`}
+                        onClick={handleSlotClick}
                       >
                         <div className="font-medium">
                           {formatTime(startHour, startMin)}
@@ -293,7 +418,95 @@ export default function DoctorDashboard() {
         </CardContent>
       </Card>
 
-      {/* Inventory Card */}
+      {/* Upcoming Appointments Card */}
+      <Card className="bg-white/90 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-6 w-6" />
+            Upcoming Appointments
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingAppointments ? (
+            <div className="flex items-center justify-center p-6">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent"></div>
+              <span className="ml-2 text-sm text-gray-500">Loading appointments...</span>
+            </div>
+          ) : doctorAppointments && doctorAppointments.length > 0 ? (
+            <div className="space-y-4">
+              {doctorAppointments.map((appointment, index) => {
+                const appointmentDate = new Date(appointment.date);
+                // Format date for display
+                const formattedDate = new Intl.DateTimeFormat('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }).format(appointmentDate);
+                
+                // Format time for display - handle both startTime and starttime formats
+                const startTime = appointment.starttime || '';
+                const endTime = appointment.endtime || '';
+                
+                interface FormatTimeFn {
+                  (timeString: string | undefined): string;
+                }
+
+                const formatTime: FormatTimeFn = (timeString) => {
+                  if (!timeString) return '';
+                  // Convert 24h format to 12h format
+                  const [hours, minutes] = timeString.split(':');
+                  const hour = parseInt(hours, 10);
+                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                  const hour12 = hour % 12 || 12;
+                  return `${hour12}:${minutes} ${ampm}`;
+                };
+                
+                const isToday = new Date().toDateString() === appointmentDate.toDateString();
+                const isPast = appointmentDate < new Date();
+                
+                return (
+                  <div 
+                    key={`${appointment.patient_name}-${appointment.date}-${startTime}`}
+                    className={`p-4 rounded-lg border ${
+                      isToday 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : isPast 
+                          ? 'border-gray-200 bg-gray-50 opacity-75' 
+                          : 'border-green-200 bg-green-50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{appointment.patient_name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {formatTime(startTime)} - {formatTime(endTime)}
+                        </p>
+                        <p className="text-sm text-gray-500">{formattedDate}</p>
+                      </div>
+                      {isToday && (
+                        <Badge className="bg-blue-500">Today</Badge>
+                      )}
+                      {!isToday && !isPast && (
+                        <Badge className="bg-green-500">Upcoming</Badge>
+                      )}
+                      {isPast && (
+                        <Badge variant="outline" className="text-gray-500">Past</Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No upcoming appointments found.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Hospital Inventory Card */}
       <Card className="bg-white/90 backdrop-blur-sm" ref={inventoryRef}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -390,6 +603,71 @@ export default function DoctorDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Unavailability Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as Unavailable</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to mark this time slot as unavailable?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="bg-gray-50 rounded-md p-3 mb-4">
+              <p><strong>Date:</strong> {formatDisplayDate(selectedDate)}</p>
+              {selectedSlot && (
+                <p><strong>Time Slot:</strong> {getTimeIntervalForSlot(selectedSlot)}</p>
+              )}
+            </div>
+            
+            {declareError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
+                {declareError}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline" 
+              onClick={() => setConfirmDialogOpen(false)}
+              disabled={declareLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={declareUnavailability}
+              disabled={declareLoading}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {declareLoading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Processing...
+                </>
+              ) : (
+                'Mark as Unavailable'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Notification */}
+      {declareSuccess && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-md shadow-lg flex items-center max-w-md">
+          <span>{declareSuccess}</span>
+          <button 
+            onClick={() => setDeclareSuccess("")} 
+            className="ml-4 text-white hover:text-green-200"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
