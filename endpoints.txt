@@ -143,3 +143,21 @@ JSON RETURN BODY
     ]
 }
 --------------------------------------
+--------------------------------------
+ADD BLOOD TEST ENDPOINT
+http://localhost:8000//api/create_blood_test/
+
+METHOD: POST
+
+JSON BODY
+{
+    "patient_id": "U0001",
+    "vitamins": "Vitamin A: a ok",
+    "minerals": "Na: 2, P: 2",
+    "cholesterol": "13.4",
+    "glucose": "3.2",
+    "hemoglobin": "55.3",
+    "whiteBC": "3.6",
+    "redBC": "3.64"
+}
+--------------------------------------
