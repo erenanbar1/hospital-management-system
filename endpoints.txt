@@ -195,7 +195,7 @@ STAFF ADDS BLOOD TEST RESULT TO PATIENT
 --------------------------------------
 --------------------------------------
 GET INVENTORY LIST
-http://localhost:8000//api/equipment/
+http://localhost:8000/api/equipment/
 
 METHOD: GET
 

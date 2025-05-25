@@ -12,6 +12,13 @@ export default function DoctorLayout({
 }) {
     const { userName } = useUser()
 
+    // Function to handle inventory navigation without page reload
+    const handleInventoryClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        // Dispatch custom event that the page component will listen for
+        document.dispatchEvent(new CustomEvent('scrollToInventory'))
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-cyan-400 via-cyan-300 to-cyan-500">
             {/* Header */}
@@ -25,9 +32,14 @@ export default function DoctorLayout({
                         <Link href="/dashboard/doctor" className="text-cyan-200 font-semibold">
                             Schedule
                         </Link>
-                        <Link href="/dashboard/doctor/inventory" className="hover:text-cyan-200">
+                        {/* Replace the regular Link with a custom handler */}
+                        <a 
+                            href="#inventory" 
+                            onClick={handleInventoryClick}
+                            className="hover:text-cyan-200"
+                        >
                             See Inventory
-                        </Link>
+                        </a>
                         <div className="flex items-center gap-2">
                             <User className="h-5 w-5" />
                             <span>{userName || 'Loading...'}</span>
@@ -45,4 +57,4 @@ export default function DoctorLayout({
             {children}
         </div>
     )
-} 
+}
