@@ -193,7 +193,7 @@ JSON RETURN BODY
 --------------------------------------
 --------------------------------------
 ADD BLOOD TEST ENDPOINT
-http://localhost:8000//api/create_blood_test/
+http://localhost:8000/api/create_blood_test/
 
 METHOD: POST
 
@@ -252,18 +252,35 @@ JSON REQUEST BODY
     "amount": "19"
 }
 --------------------------------------
---------------------------------------
-STAFF ADDS BLOOD TEST RESULT TO PATIENT
 
 --------------------------------------
+CREATE PRESCRIPTION
+http://localhost:8000/api/create_prescription/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+    "patient_id": "U0004",
+    "doctor_id": "U0008",
+    "usage": "Just and unjust"
+}
+
+JSON RESPONSE BODY
+{
+    "success": true,
+    "prescription": "PR008"
+}
 --------------------------------------
-GET INVENTORY LIST
-
-
 --------------------------------------
---------------------------------------
-UPDATE INVENTORY ITEM VALUE STATUS
+CREATE PRESCRIPTION
+http://localhost:8000/api/prescribe_medication/
 
+METHOD: POST
 
-
+JSON REQUEST BODY
+{
+    "prescription": "PR007",
+    "medicine": "M0002"
+}
 --------------------------------------

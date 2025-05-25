@@ -25,9 +25,7 @@ def create_blood_test(patient_id: str, vitamins: str, minerals: str, cholesterol
     try:
         with conn:
             with conn.cursor() as cur:
-                print("executing querry: ")
                 cur.execute(sql, [patient_id, vitamins, minerals, cholesterol, glucose, hemoglobin, whiteBC, redBC])
-                print("Querry executed")
         return True
     finally:
         conn.close()
@@ -80,3 +78,52 @@ def update_equipment(equipment: str, amount: str):
                 return True
             finally:
                 conn.close()
+
+CREATE_PRESCRIPTION_SQL_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'sql', 'healthCardSQL', 'createPrescription.sql')
+)
+
+def create_prescription_script(patient_id: str, doctor_id: str, usage_info: str):
+
+    with open(CREATE_PRESCRIPTION_SQL_PATH, 'r') as f:
+        sql = f.read()
+
+    conn = psycopg2.connect(
+        dbname=personalSettings.tableName,
+        user=personalSettings.dbUser,
+        password=personalSettings.dbPassword,
+        host="localhost",
+        port=personalSettings.dbPort
+    )
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, [patient_id, doctor_id, usage_info])
+                return cur.fetchone()[0]
+    finally:
+        conn.close()
+
+CREATE_PRESCRIPTION_SQL_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'sql', 'healthCardSQL', 'prescribeMedication.sql')
+)
+
+def prescribe_medication_script(presc: str, med: str):
+
+    with open(CREATE_PRESCRIPTION_SQL_PATH, 'r') as f:
+        sql = f.read()
+
+    conn = psycopg2.connect(
+        dbname=personalSettings.tableName,
+        user=personalSettings.dbUser,
+        password=personalSettings.dbPassword,
+        host="localhost",
+        port=personalSettings.dbPort
+    )
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, [presc, med])
+        return True
+    finally:
+        conn.close()
+

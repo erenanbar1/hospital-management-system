@@ -20,7 +20,7 @@ from django.urls import path
 from api.views import user_login, user_registration, make_appointment_view, filter_doctors_by_dept_view, list_available_timeslots_of_doctor_view, doctor_declare_unavailability_view, get_patient_balance_view
 
 from api.patientViews.healthCardViews import get_health_card_view
-from api.staffViews.staffBloodTestView import create_blood_test_view
+from api.staffViews.staffBloodTestView import create_blood_test_view, create_prescripton_view, prescribe_medication_view
 from api.staffViews.medicalEquipmentView import get_equipment_view
 
 from api.patientViews.getAppointmentViews import get_appointments_view, getDoctorAppointments
@@ -35,6 +35,8 @@ urlpatterns = [
     path('api/make_appointment/', make_appointment_view, name='make_appointment'),
     path('api/create_blood_test/', create_blood_test_view, name='create_blood_test'),
     path('api/equipment/', get_equipment_view, name='get_equipment'),
+    path('api/create_prescription/', create_prescripton_view, name='create_prescription'),
+    path('api/prescribe_medication/', prescribe_medication_view, name='prescribe_medication'),
     path('api/get_appointments/<str:patient_id>/', get_appointments_view),
     path('api/get_health_card/<str:patient_id>/', get_health_card_view),
     path('api/get_doctor_appointments/<str:doc_id>/', getDoctorAppointments),
