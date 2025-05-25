@@ -1,0 +1,74 @@
+myproject/                 ← your project root (git repo)
+├── .gitignore             ← ignore venv, __pycache__, etc.
+├── README.md
+├── requirements.txt       ← e.g. django, djangorestframework, psycopg2
+│
+├── init_db.py             ← standalone DB-init script (raw SQL runner)
+├── sql/                   
+│   └── create_tables.sql  ← all your CREATE TABLE / TRIGGER / FUNCTION SQL
+│
+├── manage.py              ← Django’s CLI entrypoint
+├── myproject/             ← the Django “project” settings
+│   ├── __init__.py
+│   ├── settings.py        ← DATABASES configured for PostgreSQL
+│   ├── urls.py            ← include your API app’s URLs here
+│   ├── wsgi.py
+│   └── asgi.py
+│
+└── api/                   ← your single “API” app
+    ├── __init__.py
+    ├── urls.py            ← define path('items/', …) → views
+    ├── views.py           ← all your @api_view or ViewSets using raw SQL
+    ├── serializers.py     ← optional, if you still want DRF serializers
+    └── management/        ← *optional* alternative to init_db.py
+        └── commands/
+            └── init_tables.py  ← wraps the same SQL in a Django manage.py cmd
+
+
+
+
+
+sql/create_tables.sql
+
+Keep all your CREATE TABLE …;, CREATE FUNCTION …;, CREATE TRIGGER …; in one SQL file.
+
+init_db.py
+
+import psycopg2
+
+with open('sql/create_tables.sql') as f:
+    sql = f.read()
+
+conn = psycopg2.connect(
+    dbname="mydb",
+    user="myuser",
+    password="secret",
+    host="localhost",
+    port=5432,
+)
+with conn:
+    with conn.cursor() as cur:
+        cur.execute(sql)
+print("✅ Database initialized.")
+Run it once (or any time you change create_tables.sql):
+
+bash
+Copy
+Edit
+python init_db.py
+myproject/settings.py
+
+python
+Copy
+Edit
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mydb',
+        'USER': 'myuser',
+        'PASSWORD': 'secret',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+api/views.py
