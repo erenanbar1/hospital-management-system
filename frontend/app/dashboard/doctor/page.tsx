@@ -224,8 +224,8 @@ export default function DoctorDashboard() {
                       });
 
                       // Format the time - check both possible property names
-                      const startTime = appointment.startTime || appointment.starttime || 'N/A';
-                      const endTime = appointment.endTime || appointment.endtime || 'N/A';
+                      const startTime = appointment.starttime || appointment.starttime || 'N/A';
+                      const endTime = appointment.endtime || appointment.endtime || 'N/A';
 
                       // Only take the hours and minutes (HH:MM) part if it exists
                       const formattedStartTime = startTime !== 'N/A' ? startTime.substring(0, 5) : 'N/A';
