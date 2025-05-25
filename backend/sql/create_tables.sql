@@ -172,7 +172,7 @@ $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_create_healthcard ON patient;
 CREATE TRIGGER trg_create_healthcard
-AFTER INSERT ON patient
+BEFORE INSERT ON patient
 FOR EACH ROW EXECUTE FUNCTION create_healthcard();
 
 -- Trigger: reduce patient balance after appointment

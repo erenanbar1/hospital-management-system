@@ -6,15 +6,16 @@
     admin password and check that port is 5432):
 https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
 
-# Run the following command in command prompt and enter password:
+# Run the following command in command prompt at the
+    backend directory and enter password:
 createdb --username=postgres hospitalSystem
 
 # If the above line caused an error go to the folder you downloaded
     postgreSQL at, go to "PostgreSQL/16/bin", open in terminal and run:
 ./createdb --username=postgres hospitalSystem
 
-# Create a file called personalSettings.py in the same directory as the
-    settings.py file and paste the following as its contents (your db information in quotations):
+# Create a file called personalSettings.py in the outer backend directory 
+    and paste the following as its contents (your db information in quotations):
 
 # Database Info
 tableName = "hospitalSystem"
@@ -22,7 +23,10 @@ dbUser = <userName> # If you have not created a user it is most probably postgre
 dbPassword = <password>
 dbPort = "5432"
 
-#TODO add init to database
+# Run the following in your terminal to initialize
+    and seed the database:
+python init_db.py
+python seed_db.py
 _____________________________________________________________________________________________________
 
 # If you want to check your database and the information you send use "pgAdmin 4" downloaded with
