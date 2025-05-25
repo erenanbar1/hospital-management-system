@@ -13,6 +13,7 @@ from filter_doctors_by_dept import filter_doctors_by_dept as filter_doctors_by_d
 from list_available_timeslots_of_doctor import list_available_timeslots_of_doctor as list_timeslots_func
 from doctor_declare_unavailability import declare_unavailability
 from get_patient_balance import get_patient_balance as get_patient_balance_func
+from give_feedback import give_feedback as give_feedback_func
 
 
 @csrf_exempt
@@ -150,5 +151,62 @@ def get_patient_balance_view(request, patient_id):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
         return JsonResponse({"success": False, "message": "Only GET allowed."}, status=405)
+
+
+@csrf_exempt
+def give_feedback_view(request):
+    """
+    API endpoint to allow patients to submit feedback for doctors they've had appointments with.
+    
+    Expects:
+    - patient_id: ID of the patient submitting feedback
+    - doc_id: ID of the doctor receiving feedback
+    - rating: Number between 1.0 and 5.0
+    - comment: Optional feedback text
+    
+    Returns:
+    - success: Boolean indicating success
+    - message: Status message
+    - f_id: Generated feedback ID (on success)
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            patient_id = data.get("patient_id")
+            doc_id = data.get("doc_id")
+            rating = data.get("rating")
+            comment = data.get("comment")  # Optional
+            
+            if not all([patient_id, doc_id, rating]):
+                return JsonResponse({
+                    "success": False, 
+                    "message": "Patient ID, Doctor ID, and rating are required."
+                }, status=400)
+                
+            # Validate rating is a number between 1.0 and 5.0
+            try:
+                rating_float = float(rating)
+                if not 1.0 <= rating_float <= 5.0:
+                    raise ValueError("Rating must be between 1.0 and 5.0")
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    "success": False, 
+                    "message": "Rating must be a number between 1.0 and 5.0."
+                }, status=400)
+            
+            # Call the function to give feedback
+            f_id = give_feedback_func(patient_id, doc_id, rating_float, comment)
+            
+            return JsonResponse({
+                "success": True,
+                "message": "Feedback submitted successfully.",
+                "f_id": f_id
+            })
+        except ValueError as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
 
 

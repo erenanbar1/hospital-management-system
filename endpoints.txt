@@ -376,3 +376,26 @@ UPDATE INVENTORY ITEM VALUE STATUS
 
 
 --------------------------------------
+--------------------------------------
+--------------------------------------
+GIVE FEEDBACK ENDPOINT
+http://localhost:8000/api/give_feedback/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+  "patient_id": "U0001",
+  "doc_id": "U0006",
+  "rating": 4.5,
+  "comment": "Very helpful and professional."
+}
+
+JSON RETURN BODY
+{
+  "success": true,
+  "message": "Feedback submitted successfully.",
+  "f_id": "F12AB"
+}
+--------------------------------------
+--------------------------------------

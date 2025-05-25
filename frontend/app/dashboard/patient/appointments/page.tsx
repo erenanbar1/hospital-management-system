@@ -5,8 +5,20 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Heart, User, Calendar, Clock, ChevronLeft, ChevronRight } from "lucide-react"
+import { Heart, User, Calendar, Clock, ChevronLeft, ChevronRight, Star, CheckCircle, Loader2 } from "lucide-react"
 import { useUser } from "@/hooks/use-user"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
+import { toast } from "@/components/ui/use-toast"
 
 export default function PatientAppointments() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -14,6 +26,13 @@ export default function PatientAppointments() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [appointmentDays, setAppointmentDays] = useState<number[]>([])
+
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
+  const [feedbackRating, setFeedbackRating] = useState(4.0)
+  const [feedbackComment, setFeedbackComment] = useState("")
+  const [submittingFeedback, setSubmittingFeedback] = useState(false)
+  const [feedbackError, setFeedbackError] = useState("")
 
   const { userId } = useUser()
 
@@ -140,6 +159,93 @@ export default function PatientAppointments() {
     )
   }
 
+  // Add this function to handle opening the feedback dialog
+  const handleOpenFeedback = (appointment: any) => {
+    setSelectedAppointment(appointment)
+    setFeedbackRating(4.0)
+    setFeedbackComment("")
+    setFeedbackError("")
+    setFeedbackDialogOpen(true)
+  }
+
+  // Add this function to handle submitting the feedback
+  const handleSubmitFeedback = async () => {
+    if (!selectedAppointment || !userId) return
+    
+    setSubmittingFeedback(true)
+    setFeedbackError("")
+    
+    try {
+      // Extract the doctor ID from the selected appointment (you might need to adjust this depending on your data structure)
+      const docId = selectedAppointment.doctor_id || "U0006" // Fallback to a default if not available
+      
+      const response = await fetch("http://localhost:8000/api/give_feedback/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          patient_id: userId,
+          doc_id: docId,
+          rating: feedbackRating,
+          comment: feedbackComment.trim() || undefined // Only send if not empty
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        toast({
+          title: "Feedback submitted",
+          description: "Thank you for your feedback!",
+          variant: "default"
+        })
+        setFeedbackDialogOpen(false)
+        
+        // Optionally, mark this appointment as reviewed in the UI
+        const updatedAppointments = appointments.map(apt => 
+          apt === selectedAppointment 
+            ? { ...apt, hasReviewed: true } 
+            : apt
+        )
+        setAppointments(updatedAppointments)
+      } else {
+        setFeedbackError(data.message || "Failed to submit feedback")
+      }
+    } catch (error) {
+      setFeedbackError("An error occurred while submitting feedback")
+      console.error("Feedback submission error:", error)
+    } finally {
+      setSubmittingFeedback(false)
+    }
+  }
+
+  // StarRating component
+  const StarRating = ({ value, onChange }: { value: number, onChange: (rating: number) => void }) => {
+    const handleStarClick = (rating: number) => {
+      onChange(rating)
+    }
+    
+    return (
+      <div className="flex items-center space-x-1">
+        {[1, 2, 3, 4, 5].map((rating) => (
+          <Star
+            key={rating}
+            className={`h-6 w-6 cursor-pointer ${
+              rating <= Math.floor(value) 
+                ? 'text-yellow-400 fill-yellow-400' 
+                : rating <= value 
+                  ? 'text-yellow-400 fill-yellow-400 opacity-60' 
+                  : 'text-gray-300'
+            }`}
+            onClick={() => handleStarClick(rating)}
+          />
+        ))}
+        <span className="ml-2 text-sm text-gray-500">({value.toFixed(1)})</span>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <Card className="bg-white/90 backdrop-blur-sm">
@@ -253,18 +359,32 @@ export default function PatientAppointments() {
                           <p className="font-medium">Department: {appointment.department}</p>
                           <p className="text-gray-600">Doctor: {appointment.doctor}</p>
                         </div>
-                        {appointment.status === "Upcoming" && (
+                        
+                        {appointment.status === "Past" && !appointment.hasReviewed && (
                           <div className="flex gap-2 mt-3">
-                            <Button size="sm" variant="outline" className="text-green-600 border-green-600">
-                              Send Feedback
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                              onClick={() => handleOpenFeedback(appointment)}
+                            >
+                              <Star className="h-4 w-4 mr-1" />
+                              Leave Feedback
                             </Button>
+                          </div>
+                        )}
+                        
+                        {appointment.status === "Past" && appointment.hasReviewed && (
+                          <div className="flex items-center gap-2 mt-3 text-sm text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>Feedback submitted</span>
                           </div>
                         )}
                       </CardContent>
                     </Card>
                   ))
-                )}
-              </div>
+                )
+}            </div>
             </div>
           )}
 
@@ -277,6 +397,87 @@ export default function PatientAppointments() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave Feedback</DialogTitle>
+            <DialogDescription>
+              {selectedAppointment && (
+                <span>
+                  Rate your appointment with Dr. {selectedAppointment.doctor} on{" "}
+                  {selectedAppointment.date}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rating">Rating</Label>
+              <div className="pt-2">
+                <StarRating 
+                  value={feedbackRating} 
+                  onChange={(rating) => setFeedbackRating(rating)} 
+                />
+              </div>
+              <div className="px-1 py-2">
+                <Slider
+                  value={[feedbackRating * 10]}
+                  min={10}
+                  max={50}
+                  step={5}
+                  onValueChange={(value) => setFeedbackRating(value[0] / 10)}
+                  className="mt-2"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="comment">Comments (Optional)</Label>
+              <Textarea
+                id="comment"
+                placeholder="Tell us about your experience..."
+                value={feedbackComment}
+                onChange={(e) => setFeedbackComment(e.target.value)}
+                className="resize-none"
+                rows={4}
+              />
+            </div>
+            
+            {feedbackError && (
+              <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
+                {feedbackError}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setFeedbackDialogOpen(false)}
+              disabled={submittingFeedback}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitFeedback}
+              disabled={submittingFeedback}
+            >
+              {submittingFeedback ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Feedback"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

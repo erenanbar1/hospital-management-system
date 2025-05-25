@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from api.views import user_login, user_registration, make_appointment_view, filter_doctors_by_dept_view, list_available_timeslots_of_doctor_view, doctor_declare_unavailability_view, get_patient_balance_view
+from api.views import user_login, user_registration, make_appointment_view, filter_doctors_by_dept_view, list_available_timeslots_of_doctor_view, doctor_declare_unavailability_view, get_patient_balance_view, get_patient_balance_view, give_feedback_view
 
 from api.patientViews.healthCardViews import get_health_card_view
 from api.staffViews.staffBloodTestView import create_blood_test_view
@@ -48,6 +48,8 @@ urlpatterns = [
     path('api/get_patient_blood_tests/<str:patient_id>/', get_patient_blood_tests_view, name='get_patient_blood_tests'),
     path('api/update_blood_test_results/', update_blood_test_results_view, name='update_blood_test_results'),
     path('api/get_recent_blood_tests/', get_recent_blood_tests_view, name='get_recent_blood_tests'),
+    path('api/give_feedback/', give_feedback_view, name='give_feedback'),
+
 ]
 
 
