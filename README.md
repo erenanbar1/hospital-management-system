@@ -45,12 +45,23 @@ cd frontend
 npm install
 \`\`\`
 
-4. Run the development server:
+4. Initialize the database:
+Go to databaseCreation.txt at the documentation and follow the steps there
+
+5. Install django if you haven't already with:
+pip install django djangorestframework
+
+6. Run backend server:
+\`\`\` bash
+python manage.py runserver
+\`\`\`
+
+7. Run the development server:
 \`\`\`bash
 npm run dev
 \`\`\`
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+8. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
