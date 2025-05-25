@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+import personalSettings
 import psycopg2
 
 with open('sql/create_tables.sql') as f:
