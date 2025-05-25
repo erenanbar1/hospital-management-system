@@ -12,6 +12,7 @@ from make_appointment import make_appointment as make_appointment_func
 from filter_doctors_by_dept import filter_doctors_by_dept as filter_doctors_by_dept_func
 from list_available_timeslots_of_doctor import list_available_timeslots_of_doctor as list_timeslots_func
 from doctor_declare_unavailability import declare_unavailability
+from get_patient_balance import get_patient_balance as get_patient_balance_func
 
 
 @csrf_exempt
@@ -134,5 +135,20 @@ def doctor_declare_unavailability_view(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
         return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
+
+
+@csrf_exempt
+def get_patient_balance_view(request, patient_id):
+    if request.method == "GET":
+        try:
+            balance = get_patient_balance_func(patient_id)
+            if balance is not None:
+                return JsonResponse({"success": True, "balance": balance})
+            else:
+                return JsonResponse({"success": False, "message": "Patient not found."}, status=404)
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Only GET allowed."}, status=405)
 
 
