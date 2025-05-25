@@ -2,6 +2,10 @@
 import os
 import uuid
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+import hashlib
+>>>>>>> Stashed changes
 =======
 import hashlib
 >>>>>>> Stashed changes
@@ -19,11 +23,17 @@ def generate_id() -> str:
     return uuid.uuid4().hex[:5].upper()
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 def hash_password(password: str) -> str:
     """Hash the password with SHA-256."""
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 def register(
     name: str,
@@ -40,7 +50,11 @@ def register(
     u_id  = generate_id()
     hc_id = generate_id()
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     pwd = password  # No hashing
+=======
+    pwd_hash = hash_password(password)
+>>>>>>> Stashed changes
 =======
     pwd_hash = hash_password(password)
 >>>>>>> Stashed changes
@@ -65,7 +79,11 @@ def register(
                     'surname':  surname,
                     'email':    email,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                     'password': pwd,
+=======
+                    'password': pwd_hash,
+>>>>>>> Stashed changes
 =======
                     'password': pwd_hash,
 >>>>>>> Stashed changes
