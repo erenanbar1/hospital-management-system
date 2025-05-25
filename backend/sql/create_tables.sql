@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS prescription (
     usage_info VARCHAR(100)
 );
 
--- Prescription–Medication join
+-- Prescription-Medication join
 CREATE TABLE IF NOT EXISTS presc_medication (
     m_id CHAR(5),
     p_id CHAR(5),
