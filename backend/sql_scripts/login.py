@@ -33,14 +33,7 @@ def login(email: str, password: str):
     try:
         with conn.cursor() as cur:
             # parameters repeated 4× for each UNION block
-
             cur.execute(query, (email, pwd) * 4)
-
-            cur.execute(query, (email, password) * 4)
-
-            cur.execute(query, (email, password) * 4)
-
-            cur.execute(query, (email, password) * 4)
             return cur.fetchone()  # (u_id, role) or None
     finally:
         conn.close()

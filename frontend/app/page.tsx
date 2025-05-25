@@ -9,10 +9,114 @@ import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Heart, Users, Stethoscope, Shield } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
-  const [userType, setUserType] = useState("patient")
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    name: "",
+    surname: "",
+    phone: ""
+  })
+  const [error, setError] = useState("")
+  const router = useRouter()
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }))
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    try {
+      const response = await fetch("http://localhost:8000/api/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed")
+      }
+
+      // Store user data in localStorage
+      localStorage.setItem("userId", data.u_id)
+      localStorage.setItem("userType", data.role)
+
+      // Redirect based on user role
+      switch (data.role.toLowerCase()) {
+        case 'patient':
+          router.push('/dashboard/patient')
+          break
+        case 'doctor':
+          router.push('/dashboard/doctor')
+          break
+        case 'staff':
+          router.push('/dashboard/staff')
+          break
+        case 'admin':
+          router.push('/dashboard/admin')
+          break
+        default:
+          throw new Error("Unknown user role")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    try {
+      const response = await fetch("http://localhost:8000/api/register/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          surname: formData.surname,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed")
+      }
+
+      // After successful registration, switch to login
+      setIsLogin(true)
+      setFormData({
+        email: formData.email,
+        password: "",
+        name: "",
+        surname: "",
+        phone: ""
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-400 via-cyan-300 to-cyan-500 flex items-center justify-center p-4">
@@ -28,6 +132,11 @@ export default function LoginPage() {
             <CardDescription>{isLogin ? "Sign in to your account" : "Join our healthcare platform"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <span className="block sm:inline">{error}</span>
+              </div>
+            )}
             <Tabs value={isLogin ? "login" : "register"} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login" onClick={() => setIsLogin(true)}>
@@ -38,61 +147,100 @@ export default function LoginPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="login" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Enter your email" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Enter your password" />
-                </div>
-                <Link href="/dashboard/patient">
-                  <Button className="w-full bg-orange-500 hover:bg-orange-600">Sign In</Button>
-                </Link>
-                <Button variant="link" className="w-full text-sm text-cyan-600">
-                  Forgot Password?
-                </Button>
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
+                    Sign In
+                  </Button>
+                  <Button variant="link" className="w-full text-sm text-cyan-600">
+                    Forgot Password?
+                  </Button>
+                </form>
               </TabsContent>
 
-              <TabsContent value="register" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="First name" />
+              <TabsContent value="register">
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">First Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="First name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="surname">Last Name</Label>
+                      <Input
+                        id="surname"
+                        placeholder="Last name"
+                        value={formData.surname}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Last name" />
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="registerEmail">Email</Label>
-                  <Input id="registerEmail" type="email" placeholder="Enter your email" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" placeholder="Enter your phone number" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userType">Account Type</Label>
-                  <Select value={userType} onValueChange={setUserType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="patient">Patient</SelectItem>
-                      <SelectItem value="doctor">Doctor</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="admin">Administrator</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="registerPassword">Password</Label>
-                  <Input id="registerPassword" type="password" placeholder="Create a password" />
-                </div>
-                <Button className="w-full bg-orange-500 hover:bg-orange-600">Create Account</Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Create a password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
+                    Create Account
+                  </Button>
+                </form>
               </TabsContent>
             </Tabs>
           </CardContent>
