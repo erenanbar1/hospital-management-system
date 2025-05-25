@@ -15,10 +15,25 @@ interface DoctorScheduleCalendarProps {
   userId: string
   onDateSelect: (date: string) => void
   appointments?: DoctorAppointment[]
+  hideAppointmentLegend?: boolean  // Add this new prop
 }
 
-export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = [] }: DoctorScheduleCalendarProps) {
+export function DoctorScheduleCalendar({ 
+  userId, 
+  onDateSelect, 
+  appointments = [],
+  hideAppointmentLegend = false  // Default to false to maintain backward compatibility
+}: DoctorScheduleCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
+  
+  // Initialize with today's date
+  const today = new Date()
+  const [selectedDay, setSelectedDay] = useState<number | null>(
+    today.getMonth() === currentDate.getMonth() && 
+    today.getFullYear() === currentDate.getFullYear() 
+      ? today.getDate() 
+      : null
+  )
 
   // Get days with appointments
   const appointmentDays = appointments.reduce<number[]>((days, appointment) => {
@@ -44,6 +59,7 @@ export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = []
       newDate.setMonth(prev.getMonth() - 1)
       return newDate
     })
+    setSelectedDay(null) // Reset selected day when changing months
   }
 
   // Navigate to next month
@@ -53,6 +69,7 @@ export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = []
       newDate.setMonth(prev.getMonth() + 1)
       return newDate
     })
+    setSelectedDay(null) // Reset selected day when changing months
   }
 
   // Get calendar days
@@ -97,6 +114,8 @@ export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = []
   const formatDateForApi = (day: number) => {
     const date = new Date(currentDate)
     date.setDate(day)
+    // Set the selected day when formatting date
+    setSelectedDay(day)
     return date.toISOString().split('T')[0]
   }
 
@@ -128,6 +147,7 @@ export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = []
 
           const hasAppointment = appointmentDays.includes(day)
           const todayHighlight = isToday(day)
+          const isSelected = selectedDay === day
 
           return (
             <Button
@@ -136,8 +156,9 @@ export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = []
               size="sm"
               className={`
                 h-8 w-8 p-0 
-                ${todayHighlight ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
-                ${hasAppointment && !todayHighlight ? "bg-green-500 text-white hover:bg-green-600" : ""}
+                ${todayHighlight ? "bg-teal-500 text-white hover:bg-teal-600" : ""}
+                ${isSelected && !todayHighlight ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                ${hasAppointment && !todayHighlight && !isSelected ? "bg-green-500 text-white hover:bg-green-600" : ""}
               `}
               onClick={() => onDateSelect(formatDateForApi(day))}
             >
@@ -147,17 +168,23 @@ export function DoctorScheduleCalendar({ userId, onDateSelect, appointments = []
         })}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-2 mt-4 text-xs">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-          <span>Today</span>
+      {/* Conditionally render the legend */}
+      {!hideAppointmentLegend && (
+        <div className="flex items-center gap-4 mt-2 text-xs">
+          <div className="flex items-center">
+            <div className="h-3 w-3 rounded-full bg-teal-500 mr-1"></div>
+            <span>Today</span>
+          </div>
+          <div className="flex items-center">
+            <div className="h-3 w-3 rounded-full bg-blue-500 mr-1"></div>
+            <span>Selected</span>
+          </div>
+          <div className="flex items-center">
+            <div className="h-3 w-3 rounded-full bg-green-500 mr-1"></div>
+            <span>Has Appointments</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span>Has Appointments</span>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
