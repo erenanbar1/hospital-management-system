@@ -32,3 +32,21 @@ JSON BODY
   "date": "2024-12-01"
 }
 --------------------------------------
+--------------------------------------
+GET APPOINTMENT ENDPOINT
+http://localhost:8000/api/get_appointments/<str:patient_id>/
+
+returns
+{
+    "success": true,
+    "appointments": [
+        {
+            "doctor_name": "Frank",
+            "date": "2024-12-02",
+            "starttime": "08:30:00",
+            "endtime": "09:00:00",
+            "department": "Neurologist"
+        }
+    ]
+}
+--------------------------------------

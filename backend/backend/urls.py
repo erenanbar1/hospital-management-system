@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path
 
 from api.views import user_login, user_registration, make_appointment_view
+from api.appointmentViews.getAppointmentViews import get_appointments_view
 
 
 
@@ -28,7 +29,7 @@ urlpatterns = [
     path('api/register/', user_registration, name='user_registration'),
 
     path('api/make_appointment/', make_appointment_view, name='make_appointment'),
-
+    path('get_appointments/<str:patient_id>/', get_appointments_view),
 ]
 
 
