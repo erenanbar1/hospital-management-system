@@ -15,8 +15,11 @@ import sys
 import os
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql_scripts')))
 from login import login as login_func
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======

@@ -16,9 +16,12 @@ def login(email: str, password: str):
     """
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     # Do NOT hash the password before querying
     pwd = password
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -39,7 +42,11 @@ def login(email: str, password: str):
             # parameters repeated 4× for each UNION block
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             cur.execute(query, (email, pwd) * 4)
+=======
+            cur.execute(query, (email, password) * 4)
+>>>>>>> Stashed changes
 =======
             cur.execute(query, (email, password) * 4)
 >>>>>>> Stashed changes

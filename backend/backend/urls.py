@@ -18,7 +18,11 @@ from django.contrib import admin
 from django.urls import path
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from api.views import user_login, user_registration
+=======
+from api.views import user_login
+>>>>>>> Stashed changes
 =======
 from api.views import user_login
 >>>>>>> Stashed changes
@@ -31,7 +35,10 @@ urlpatterns = [
     path('api/login/', user_login, name='user_login'),
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     path('api/register/', user_registration, name='user_registration'),
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======

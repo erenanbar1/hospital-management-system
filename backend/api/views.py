@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import sys
 import os
 
@@ -10,6 +11,10 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql_scripts')))
 from login import login as login_func
 from registration import register as register_func
+=======
+
+from "../sql_scripts/login.py" import login as login_func
+>>>>>>> Stashed changes
 =======
 
 from "../sql_scripts/login.py" import login as login_func
@@ -31,7 +36,11 @@ def user_login(request):
             result = login_func(email, password)
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             if result:
+=======
+            if result == "SUCCESS":
+>>>>>>> Stashed changes
 =======
             if result == "SUCCESS":
 >>>>>>> Stashed changes
@@ -45,6 +54,7 @@ def user_login(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
         return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 
@@ -71,6 +81,8 @@ def user_registration(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
         return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
