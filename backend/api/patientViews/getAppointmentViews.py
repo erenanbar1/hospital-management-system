@@ -15,10 +15,8 @@ def get_appointments_view(request, patient_id):
         if not patient_id:
             return JsonResponse({"success": False, "message": "Patient ID is required."}, status=400)
         try:
-            print("Appointment get called")
             # Replace this with whatever logic you need to fetch the appointments
             appointments = get_appointments_for_patient(patient_id)
-            print("Appointment get end")
             return JsonResponse({"success": True, "appointments": appointments})
         except Exception as e:
             return JsonResponse({"success": False, "message": str(e)}, status=500)

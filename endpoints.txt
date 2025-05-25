@@ -117,3 +117,29 @@ JSON RETURN BODY
     ]
 }
 --------------------------------------
+--------------------------------------
+REQUEST PATIENT HEALTH CARD ENDPOINT
+http://localhost:8000//api/get_health_card/<str:patient_id>/
+
+METHOD: GET
+
+JSON RETURN BODY
+{
+    "success": true,
+    "healthCard": [
+        {
+            "testdate": "2024-12-11",
+            "cholesterol": "200.00",
+            "glucose": "95.00",
+            "hemoglobin": "14.20",
+            "whitebloodcell": "5.90",
+            "redbloodcell": "4.80",
+            "prescriptiondate": "2024-12-02",
+            "usageinfo": "Take twice daily",
+            "medicationname": "Amoxicillin",
+            "medicationformat": "Capsule",
+            "medicationdosage": "250.0"
+        }
+    ]
+}
+--------------------------------------
