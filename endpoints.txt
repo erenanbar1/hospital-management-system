@@ -85,3 +85,35 @@ JSON RETURN BODY
     ]
 }
 --------------------------------------
+--------------------------------------
+FILTER DOCTORS BY DEPARTMENT ENDPOINT
+http://localhost:8000/api/filter_doctors_by_dept/?dept_name=Cardiology
+
+METHOD: GET
+
+ex: http://localhost:8000/api/filter_doctors_by_dept/?dept_name=Cardiology
+ARGUMENT IS IN URL QUERY PARAMETER: dept_name
+
+JSON RETURN BODY
+{
+    "success": true,
+    "doctors": [
+        {
+            "doctor_id": "U0006",
+            "doctor_name": "Alice",
+            "doctor_surname": "Smith",
+            "specialization": "Cardiology",
+            "rating": 4.8,
+            "price": 200
+        },
+        {
+            "doctor_id": "U0007",
+            "doctor_name": "Bob",
+            "doctor_surname": "Jones",
+            "specialization": "Cardiology",
+            "rating": 4.5,
+            "price": 180
+        }
+    ]
+}
+--------------------------------------

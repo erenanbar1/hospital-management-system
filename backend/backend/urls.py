@@ -17,9 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from api.views import user_login, user_registration, make_appointment_view
-from api.appointmentViews.getAppointmentViews import get_appointments_view, getDoctorAppointments
+from api.views import user_login, user_registration, make_appointment_view, filter_doctors_by_dept_view
 
+from api.appointmentViews.getAppointmentViews import get_appointments_view, getDoctorAppointments
 
 
 urlpatterns = [
@@ -31,7 +31,7 @@ urlpatterns = [
     path('api/make_appointment/', make_appointment_view, name='make_appointment'),
     path('api/get_appointments/<str:patient_id>/', get_appointments_view),
     path('api/get_doctor_appointments/<str:doc_id>/', getDoctorAppointments),
-
+    path('api/filter_doctors_by_dept/', filter_doctors_by_dept_view, name='filter_doctors_by_dept'),
 ]
 
 

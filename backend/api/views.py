@@ -1,15 +1,15 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-
 import sys
 import os
 
-# Add sql_scripts to sys.path and import login and register
+# Add sql_scripts to sys.path and import login, register, and filter_doctors_by_dept
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql_scripts')))
 from login import login as login_func
 from registration import register as register_func
 from make_appointment import make_appointment as make_appointment_func
+from filter_doctors_by_dept import filter_doctors_by_dept as filter_doctors_by_dept_func
 
 
 @csrf_exempt
@@ -83,5 +83,20 @@ def make_appointment_view(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
         return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
+
+
+@csrf_exempt
+def filter_doctors_by_dept_view(request):
+    if request.method == "GET":
+        dept_name = request.GET.get("dept_name")
+        if not dept_name:
+            return JsonResponse({"success": False, "message": "Department name is required."}, status=400)
+        try:
+            doctors = filter_doctors_by_dept_func(dept_name)
+            return JsonResponse({"success": True, "doctors": doctors})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Only GET allowed."}, status=405)
 
 
