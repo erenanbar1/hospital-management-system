@@ -25,3 +25,18 @@ def get_appointments_view(request, patient_id):
 
     else:
         return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+from sql_scripts.getDoctorAppointment import get_appointments_for_doctor
+
+@csrf_exempt
+def getDoctorAppointments(request, doc_id):
+    if request.method == "GET":
+        if not doc_id:
+            return JsonResponse({"success": False, "message": "Doctor ID is required."}, status=400)
+        try:
+            appointments = get_appointments_for_doctor(doc_id)
+            return JsonResponse({"success": True, "appointments": appointments})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)

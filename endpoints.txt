@@ -1,7 +1,7 @@
 LOGIN ENDPOINT
 http://localhost:8000/api/login/
 
-JSON BODY
+JSON REQUEST BODY
 {
   "email": "ma@example.com",
   "password": "ma"
@@ -11,7 +11,7 @@ JSON BODY
 REGISTRATION ENDPOINT
 http://localhost:8000/api/register/
 
-JSON BODY
+JSON REQUEST BODY
 {
   "name": "ma",
   "surname": "am",
@@ -24,7 +24,7 @@ JSON BODY
 MAKE APPOINTMENT ENDPOINT
 http://localhost:8000/api/make_appointment/
 
-JSON BODY
+JSON REQUEST BODY
 {
   "patient_id": "U0001",
   "doc_id": "U0006",
@@ -33,19 +33,54 @@ JSON BODY
 }
 --------------------------------------
 --------------------------------------
-GET APPOINTMENT ENDPOINT
+GET PATIENT APPOINTMENT ENDPOINT
 http://localhost:8000/api/get_appointments/<str:patient_id>/
 
-returns
+ex: http://localhost:8000/api/get_appointments/U0001/
+THERE IS NO JSON BODY FOR REQUEST, ARGUEMNT IS IN URL ADDRESS <str:patient_id>
+
+JSON RETURN BODY
 {
     "success": true,
     "appointments": [
         {
-            "doctor_name": "Frank",
+            "doctor_name": "Eve",
+            "date": "2024-12-01",
+            "starttime": "09:00:00",
+            "endtime": "09:30:00",
+            "department": "Cardiologist"
+        },
+        {
+            "doctor_name": "Eve",
+            "date": "2024-12-01",
+            "starttime": "08:00:00",
+            "endtime": "08:30:00",
+            "department": "Cardiologist"
+        }
+    ]
+}
+--------------------------------------
+GET DOCTOR APPOINTMENT ENDPOINT
+http://localhost:8000/api/get_doctor_appointments/<str:doc_id>/
+
+ex: http://localhost:8000/api/get_doctor_appointments/U0006/
+THERE IS NO JSON BODY FOR REQUEST, ARGUMENT IS IN URL ADDRESS <str:doc_id>
+
+JSON RETURN BODY
+{
+    "success": true,
+    "appointments": [
+        {
+            "patient_name": "John",
+            "date": "2024-12-01",
+            "startTime": "09:00:00",
+            "endTime": "09:30:00"
+        },
+        {
+            "patient_name": "Jane",
             "date": "2024-12-02",
-            "starttime": "08:30:00",
-            "endtime": "09:00:00",
-            "department": "Neurologist"
+            "startTime": "10:00:00",
+            "endTime": "10:30:00"
         }
     ]
 }
