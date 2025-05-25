@@ -142,6 +142,68 @@ JSON RETURN BODY
         }
     ]
 }
+LIST AVAILABLE TIMESLOTS OF DOCTOR ENDPOINT
+http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=U0006&date=2024-12-01
+
+METHOD: GET
+
+ARGUMENTS ARE IN URL QUERY PARAMETERS: doc_id, date
+
+ex: http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=U0006&date=2024-12-01
+
+JSON RETURN BODY
+{
+    "success": true,
+    "timeslots": [
+        {
+            "ts_id": "TS001",
+            "start_time": "00:00:00",
+            "end_time": "00:30:00"
+        },
+        {
+            "ts_id": "TS002",
+            "start_time": "00:30:00",
+            "end_time": "01:00:00"
+        }
+        // ... more available timeslots ...
+    ]
+}
+--------------------------------------
+--------------------------------------
+DOCTOR DECLARE UNAVAILABILITY ENDPOINT
+http://localhost:8000/api/doctor_declare_unavailability/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+  "ts_id": "TS001",
+  "doc_id": "U0006",
+  "date": "2024-12-01"
+}
+
+JSON RETURN BODY
+{
+  "success": true,
+  "message": "Unavailability declared.",
+  "ua_id": "ABCDE"
+}
+--------------------------------------
+--------------------------------------
+STAFF ADDS BLOOD TEST RESULT TO PATIENT
+
+--------------------------------------
+--------------------------------------
+GET INVENTORY LIST
+
+
+--------------------------------------
+--------------------------------------
+UPDATE INVENTORY ITEM VALUE STATUS
+
+
+
+--------------------------------------
 --------------------------------------
 --------------------------------------
 ADD BLOOD TEST ENDPOINT

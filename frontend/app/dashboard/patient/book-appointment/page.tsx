@@ -2,275 +2,458 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Heart, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react"
+import { Heart, User, ChevronLeft, ChevronRight, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+interface Doctor {
+  doctor_id: string
+  doctor_name: string
+  doctor_surname: string
+  specialization: string
+  rating: number
+  price: number
+}
+
+interface TimeSlot {
+  ts_id: string
+  start_time: string
+  end_time: string
+}
 
 export default function BookAppointment() {
+  // Patient ID would normally come from auth context
+  const patientId = "U0001" // Example patient ID
+
   const [selectedDepartment, setSelectedDepartment] = useState("")
   const [selectedDoctor, setSelectedDoctor] = useState("")
-  const [selectedDate, setSelectedDate] = useState("")
-  const [selectedTime, setSelectedTime] = useState("")
-  
-  interface Doctor {
-    doctor_id: number;
-    doctor_name: string;
-    doctor_surname: string;
-    price?: string | number;
-  }
-  
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
   const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
-  const timeSlots = [
-    { time: "08:00 - 07:00", status: "choose", available: true },
-    { time: "07:00 - 08:00", status: "choose", available: true },
-    { time: "08:00 - 09:00", status: "choose", available: true },
-    { time: "09:00 - 10:00", status: "choose", available: true },
-    { time: "10:00 - 11:00", status: "choose", available: true },
-    { time: "11:00 - 12:00", status: "occupied", available: false },
-    { time: "12:00 - 13:00", status: "occupied", available: false },
-    { time: "13:00 - 14:00", status: "occupied", available: false },
-    { time: "14:00 - 15:00", status: "choose", available: true },
-    { time: "15:00 - 16:00", status: "choose", available: true },
-    { time: "16:00 - 17:00", status: "choose", available: true },
-    { time: "17:00 - 18:00", status: "choose", available: true },
-    { time: "18:00 - 19:00", status: "choose", available: true },
-    { time: "19:00 - 20:00", status: "occupied", available: false },
-    { time: "20:00 - 21:00", status: "occupied", available: false },
-    { time: "21:00 - 22:00", status: "occupied", available: false },
-    { time: "22:00 - 23:00", status: "occupied", available: false },
-    { time: "23:00 - 00:00", status: "occupied", available: false },
-  ]
+  // Get month name
+  const getMonthName = () => {
+    return selectedDate.toLocaleString('tr-TR', { month: 'long', year: 'numeric' })
+  }
 
-  const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1)
+  // Navigate to previous month
+  const prevMonth = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setMonth(newDate.getMonth() - 1)
+    setSelectedDate(newDate)
+  }
 
-  // Function to fetch doctors by department
-  const fetchDoctorsByDepartment = async (deptName: string) => {
-    if (!deptName) return;
+  // Navigate to next month
+  const nextMonth = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setMonth(newDate.getMonth() + 1)
+    setSelectedDate(newDate)
+  }
 
-    setLoading(true);
-    console.log("Fetching doctors for department:", deptName);
+  // Format date for API request (YYYY-MM-DD)
+  const formatDateForAPI = (date: Date) => {
+    return date.toISOString().split('T')[0]
+  }
 
-    try {
-      // Make API request to your backend
-      const response = await fetch(`http://localhost:8000/api/filter_doctors_by_dept/?dept_name=${encodeURIComponent(deptName)}`);
-      const data = await response.json();
+  // Get days in current month
+  const getDaysInMonth = () => {
+    const year = selectedDate.getFullYear()
+    const month = selectedDate.getMonth() + 1
+    return new Date(year, month, 0).getDate()
+  }
 
-      console.log("API Response:", data);
+  // Get first day of month (0 = Sunday, 1 = Monday, etc.)
+  const getFirstDayOfMonth = () => {
+    const year = selectedDate.getFullYear()
+    const month = selectedDate.getMonth()
+    return new Date(year, month, 1).getDay() || 7 // Convert Sunday (0) to 7 for EU calendar format
+  }
 
-      if (data.success && Array.isArray(data.doctors)) {
-        setDoctors(data.doctors);
-      } else {
-        console.error("API error:", data.message || "Unknown error");
-        setDoctors([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch doctors:", error);
-      setDoctors([]);
-    } finally {
-      setLoading(false);
+  // Select a specific day
+  const selectDay = (day: number) => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(day)
+    setSelectedDate(newDate)
+
+    // If doctor is already selected, fetch available time slots for this date
+    if (selectedDoctor) {
+      fetchAvailableTimeSlots(selectedDoctor, newDate)
     }
-  };
+  }
 
-  // Update doctors list when department changes
-  const handleDepartmentChange = (deptName: string) => {
-    console.log("Department selected:", deptName);
-    setSelectedDepartment(deptName);
-    setSelectedDoctor(""); // Reset doctor selection
-    fetchDoctorsByDepartment(deptName);
-  };
+  // Fetch doctors by department
+  useEffect(() => {
+    if (selectedDepartment) {
+      setLoading(true)
+      setError("")
+
+      fetch(`http://localhost:8000/api/filter_doctors_by_dept/?dept_name=${selectedDepartment}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            setDoctors(data.doctors)
+          } else {
+            setError(data.message || "Failed to fetch doctors")
+            setDoctors([])
+          }
+        })
+        .catch(err => {
+          setError("Error fetching doctors: " + err.message)
+          setDoctors([])
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      setDoctors([])
+    }
+  }, [selectedDepartment])
+
+  // Fetch available time slots when doctor or date changes
+  const fetchAvailableTimeSlots = (doctorId: string, date: Date) => {
+    setLoading(true)
+    setError("")
+    setAvailableTimeSlots([])
+
+    const formattedDate = formatDateForAPI(date)
+
+    fetch(`http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=${doctorId}&date=${formattedDate}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          setAvailableTimeSlots(data.timeslots)
+        } else {
+          setError(data.message || "Failed to fetch available time slots")
+        }
+      })
+      .catch(err => {
+        setError("Error fetching time slots: " + err.message)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }
+
+  // When doctor selection changes
+  useEffect(() => {
+    if (selectedDoctor) {
+      fetchAvailableTimeSlots(selectedDoctor, selectedDate)
+    } else {
+      setAvailableTimeSlots([])
+    }
+  }, [selectedDoctor])
+
+  // Handle time slot selection
+  const handleTimeSlotSelection = (tsId: string) => {
+    setSelectedTimeSlot(tsId)
+  }
+
+  // Handle appointment booking
+  const handleBookAppointment = () => {
+    if (!selectedDoctor || !selectedTimeSlot) {
+      setError("Please select a doctor and time slot")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+
+    const appointmentData = {
+      patient_id: patientId,
+      doc_id: selectedDoctor,
+      ts_id: selectedTimeSlot,
+      date: formatDateForAPI(selectedDate)
+    }
+
+    fetch('http://localhost:8000/api/make_appointment/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(appointmentData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          setSuccessMessage("Appointment booked successfully!")
+          setSelectedTimeSlot("")
+          // Refresh available time slots
+          fetchAvailableTimeSlots(selectedDoctor, selectedDate)
+        } else {
+          setError(data.message || "Failed to book appointment")
+        }
+      })
+      .catch(err => {
+        setError("Error booking appointment: " + err.message)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }
+
+  // Format time for display (convert "00:00:00" to "00:00")
+  const formatTime = (time: string) => {
+    return time.substring(0, 5)
+  }
+
+  // Generate calendar days with proper offset for first day of month
+  const generateCalendarDays = () => {
+    const daysInMonth = getDaysInMonth()
+    const firstDay = getFirstDayOfMonth()
+
+    // Create array for all days in month
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+
+    // Add empty cells for days before the first day of month
+    const emptyCells = Array.from({ length: firstDay - 1 }, () => null)
+
+    return [...emptyCells, ...days]
+  }
+
+  const calendarDays = generateCalendarDays()
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <Card className="bg-white/90 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Book New Appointment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column - Selections */}
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Select Department</label>
-                <Select
-                  value={selectedDepartment}
-                  onValueChange={handleDepartmentChange}
-                >
-                  <SelectTrigger className="bg-cyan-100">
-                    <SelectValue placeholder="Choose department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Make sure these match exactly with your backend values */}
-                    <SelectItem value="Cardiology">Cardiology</SelectItem>
-                    <SelectItem value="Pediatrics">Pediatrics</SelectItem>
-                    <SelectItem value="Dermatology">Dermatology</SelectItem>
-                    <SelectItem value="Neurology">Neurology</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Select Doctor</label>
-                <Select
-                  value={selectedDoctor}
-                  onValueChange={setSelectedDoctor}
-                  disabled={loading || !doctors.length}
-                >
-                  <SelectTrigger className="bg-cyan-100">
-                    <SelectValue placeholder={
-                      loading ? "Loading..." :
-                        !selectedDepartment ? "Select a department first" :
-                          !doctors.length ? "No doctors available" :
-                            "Choose doctor"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {doctors.map((doctor) => (
-                      <SelectItem
-                        key={doctor.doctor_id}
-                        value={String(doctor.doctor_id)}
-                      >
-                        Dr. {doctor.doctor_name} {doctor.doctor_surname}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Calendar */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <Button variant="ghost" size="sm">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <h3 className="font-semibold">March</h3>
-                  <Button variant="ghost" size="sm">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                    <div key={day} className="text-center text-xs font-medium p-1">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1">
-                  {calendarDays.map((day) => {
-                    const isSelected = day === 28
-                    return (
-                      <Button
-                        key={day}
-                        variant={isSelected ? "default" : "ghost"}
-                        size="sm"
-                        className={`h-8 w-8 p-0 text-xs ${isSelected ? "bg-blue-500 text-white" : ""}`}
-                      >
-                        {day}
-                      </Button>
-                    )
-                  })}
-                </div>
-
-                <div className="mt-4 p-3 bg-gray-50 rounded">
-                  <p className="text-sm font-medium">28.03.2025</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded"></div>
-                      <span>Free</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-500 rounded"></div>
-                      <span>Occupied</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-cyan-400 via-cyan-300 to-cyan-500">
+      <div className="max-w-4xl mx-auto p-6">
+        <Card className="bg-white/90 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Calendar className="h-6 w-6" />
+              <h2 className="text-xl font-bold">Book an Appointment</h2>
             </div>
 
-            {/* Middle Column - Time Slots */}
-            <div>
-              <h3 className="font-medium mb-4">Available Time Slots</h3>
-              <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-                {timeSlots.map((slot, index) => (
-                  <Button
-                    key={index}
-                    variant={slot.available ? "outline" : "secondary"}
-                    size="sm"
-                    disabled={!slot.available}
-                    className={`
-                      text-xs h-8
-                      ${slot.available ? "hover:bg-green-50 border-green-300" : "bg-red-100 text-red-600"}
-                    `}
-                    onClick={() => slot.available && setSelectedTime(slot.time)}
+            {successMessage && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
+                {successMessage}
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                {error}
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Left Column - Selection */}
+              <div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Select Department</label>
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger className="bg-cyan-50">
+                      <SelectValue placeholder="Choose department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Make sure these match exactly with your backend values */}
+                      <SelectItem value="Cardiology">Cardiology</SelectItem>
+                      <SelectItem value="Pediatrics">Pediatrics</SelectItem>
+                      <SelectItem value="Dermatology">Dermatology</SelectItem>
+                      <SelectItem value="Neurology">Neurology</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Select Doctor</label>
+                  <Select
+                    value={selectedDoctor}
+                    onValueChange={setSelectedDoctor}
+                    disabled={loading || !doctors.length}
                   >
-                    {slot.time}
-                  </Button>
-                ))}
+                    <SelectTrigger className="bg-cyan-50">
+                      <SelectValue placeholder={
+                        loading ? "Loading..." :
+                          !selectedDepartment ? "Select a department first" :
+                            !doctors.length ? "No doctors available" :
+                              "Choose doctor"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {doctors.map((doctor) => (
+                        <SelectItem
+                          key={doctor.doctor_id}
+                          value={doctor.doctor_id}
+                        >
+                          Dr. {doctor.doctor_name} {doctor.doctor_surname}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Calendar */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <button onClick={prevMonth} className="text-gray-500 hover:text-gray-700">
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <h3 className="font-medium text-center">{getMonthName()}</h3>
+                    <button onClick={nextMonth} className="text-gray-500 hover:text-gray-700">
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                      <div key={day} className="text-center text-xs font-medium p-1">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1">
+                    {calendarDays.map((day, index) => {
+                      if (day === null) {
+                        return <div key={`empty-${index}`} className="h-8 w-8"></div>
+                      }
+
+                      const isSelected = day === selectedDate.getDate()
+                      const isToday = day === new Date().getDate() &&
+                        selectedDate.getMonth() === new Date().getMonth() &&
+                        selectedDate.getFullYear() === new Date().getFullYear()
+
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => selectDay(day)}
+                          className={`
+                            h-8 w-8 rounded-full text-xs flex items-center justify-center
+                            ${isSelected ? 'bg-blue-500 text-white' : ''}
+                            ${isToday && !isSelected ? 'border border-blue-500' : ''}
+                            ${!isSelected && !isToday ? 'hover:bg-gray-100' : ''}
+                          `}
+                        >
+                          {day}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-4 p-3 bg-gray-50 rounded flex items-center gap-4">
+                    <p className="text-sm font-medium">{formatDateForAPI(selectedDate)}</p>
+                    <div className="flex items-center gap-4 text-xs ml-auto">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span>Available</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <span>Unavailable</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Middle Column - Time Slots */}
+              <div>
+                <h3 className="font-medium mb-4">Available Time Slots</h3>
+
+                <div className="bg-white p-4 rounded-md border border-gray-200 min-h-[300px]">
+                  {loading ? (
+                    <div className="text-center py-8">Loading time slots...</div>
+                  ) : !selectedDoctor ? (
+                    <div className="text-center py-8 text-gray-500">
+                      Please select a doctor to see available time slots
+                    </div>
+                  ) : availableTimeSlots.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No available time slots for this date
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {availableTimeSlots.map((slot) => (
+                        <button
+                          key={slot.ts_id}
+                          className={`
+                            py-2 px-3 rounded-md border text-sm
+                            ${selectedTimeSlot === slot.ts_id
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'border-gray-300 hover:bg-gray-50'}
+                          `}
+                          onClick={() => handleTimeSlotSelection(slot.ts_id)}
+                        >
+                          {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column - Appointment Details */}
+              <div>
+                <h3 className="font-medium mb-4">Appointment Details</h3>
+
+                <div className="bg-white p-4 rounded-md border border-gray-200">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Department</p>
+                      <p className="font-medium">{selectedDepartment || "Not selected"}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-500">Doctor</p>
+                      <p className="font-medium">
+                        {selectedDoctor
+                          ? doctors.find(d => d.doctor_id === selectedDoctor)
+                            ? `Dr. ${doctors.find(d => d.doctor_id === selectedDoctor)?.doctor_name} ${doctors.find(d => d.doctor_id === selectedDoctor)?.doctor_surname
+                            }`
+                            : "Not found"
+                          : "Not selected"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-500">Date</p>
+                      <p className="font-medium">{formatDateForAPI(selectedDate)}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-500">Time</p>
+                      <p className="font-medium">
+                        {selectedTimeSlot
+                          ? `${formatTime(
+                            availableTimeSlots.find(s => s.ts_id === selectedTimeSlot)?.start_time || ""
+                          )} - ${formatTime(
+                            availableTimeSlots.find(s => s.ts_id === selectedTimeSlot)?.end_time || ""
+                          )}`
+                          : "Not selected"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <button
+                      className={`
+                        w-full py-2 px-4 rounded-md text-white font-medium
+                        ${(!selectedDoctor || !selectedTimeSlot || loading)
+                          ? 'bg-blue-300 cursor-not-allowed'
+                          : 'bg-blue-500 hover:bg-blue-600'}
+                      `}
+                      disabled={!selectedDoctor || !selectedTimeSlot || loading}
+                      onClick={handleBookAppointment}
+                    >
+                      {loading ? "Processing..." : "Book Appointment"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Right Column - Summary */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Appointment Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-600">Department</p>
-                    <p className="font-medium">{selectedDepartment || "Not selected"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Doctor</p>
-                    <p className="font-medium">
-                      {selectedDoctor && doctors.length > 0
-                        ? (() => {
-                          const doctor = doctors.find(d => String(d.doctor_id) === selectedDoctor);
-                          return doctor ? `Dr. ${doctor.doctor_name} ${doctor.doctor_surname}` : "Not selected";
-                        })()
-                        : "Not selected"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Date</p>
-                    <p className="font-medium">28.03.2025</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Time</p>
-                    <p className="font-medium">{selectedTime || "14:00 - 15:00"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Balance</p>
-                    <p className="font-medium">xx</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Appointment Price</p>
-                    <p className="font-medium">
-                      {selectedDoctor && doctors.length > 0
-                        ? (() => {
-                          const doctor = doctors.find(d => String(d.doctor_id) === selectedDoctor);
-                          return doctor && doctor.price ? doctor.price : "xxx";
-                        })()
-                        : "xxx"}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Button
-                className="w-full bg-green-500 hover:bg-green-600 text-white"
-                disabled={!selectedDoctor || !selectedDepartment || !selectedTime}
-              >
-                Save Appointment
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
