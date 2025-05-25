@@ -142,6 +142,8 @@ JSON RETURN BODY
         }
     ]
 }
+--------------------------------------
+--------------------------------------
 LIST AVAILABLE TIMESLOTS OF DOCTOR ENDPOINT
 http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=U0006&date=2024-12-01
 
@@ -190,8 +192,22 @@ JSON RETURN BODY
 }
 --------------------------------------
 --------------------------------------
-STAFF ADDS BLOOD TEST RESULT TO PATIENT
+ADD BLOOD TEST ENDPOINT
+http://localhost:8000//api/create_blood_test/
 
+METHOD: POST
+
+JSON BODY
+{
+    "patient_id": "U0001",
+    "vitamins": "Vitamin A: a ok",
+    "minerals": "Na: 2, P: 2",
+    "cholesterol": "13.4",
+    "glucose": "3.2",
+    "hemoglobin": "55.3",
+    "whiteBC": "3.6",
+    "redBC": "3.64"
+}
 --------------------------------------
 --------------------------------------
 GET INVENTORY LIST
@@ -223,7 +239,6 @@ JSON RETURN BODY
         }
     ]
 }
-
 --------------------------------------
 --------------------------------------
 UPDATE INVENTORY ITEM VALUE STATUS
@@ -236,25 +251,19 @@ JSON REQUEST BODY
     "equipment": "ME002",
     "amount": "19"
 }
+--------------------------------------
+--------------------------------------
+STAFF ADDS BLOOD TEST RESULT TO PATIENT
+
+--------------------------------------
+--------------------------------------
+GET INVENTORY LIST
 
 
 --------------------------------------
 --------------------------------------
---------------------------------------
-ADD BLOOD TEST ENDPOINT
-http://localhost:8000//api/create_blood_test/
+UPDATE INVENTORY ITEM VALUE STATUS
 
-METHOD: POST
 
-JSON BODY
-{
-    "patient_id": "U0001",
-    "vitamins": "Vitamin A: a ok",
-    "minerals": "Na: 2, P: 2",
-    "cholesterol": "13.4",
-    "glucose": "3.2",
-    "hemoglobin": "55.3",
-    "whiteBC": "3.6",
-    "redBC": "3.64"
-}
+
 --------------------------------------

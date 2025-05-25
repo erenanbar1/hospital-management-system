@@ -24,6 +24,29 @@ export default function PatientAppointments() {
     }
   }, [userId])
 
+  // Update this useEffect to also depend on currentDate
+  useEffect(() => {
+    if (userId) {
+      fetchAppointments(userId)
+    }
+  }, [userId])
+
+  // Add a new useEffect to update appointmentDays when currentDate changes
+  useEffect(() => {
+    // Extract days of month for appointments in the current month
+    const currentMonth = currentDate.getMonth()
+    const currentYear = currentDate.getFullYear()
+
+    const days = appointments
+      .filter((apt) => {
+        const aptDate = apt.rawDate
+        return aptDate.getMonth() === currentMonth && aptDate.getFullYear() === currentYear
+      })
+      .map((apt) => apt.rawDate.getDate())
+
+    setAppointmentDays(days)
+  }, [currentDate, appointments])
+
   const fetchAppointments = async (patientId: string | number) => {
     setLoading(true)
     setError("")
@@ -64,19 +87,6 @@ export default function PatientAppointments() {
         })
 
         setAppointments(formattedAppointments)
-
-        // Extract days of month for appointments in the current month
-        const currentMonth = currentDate.getMonth()
-        const currentYear = currentDate.getFullYear()
-
-        const days = formattedAppointments
-          .filter((apt: { rawDate: Date }) => {
-            const aptDate = apt.rawDate
-            return aptDate.getMonth() === currentMonth && aptDate.getFullYear() === currentYear
-          })
-          .map((apt: { rawDate: Date }) => apt.rawDate.getDate())
-
-        setAppointmentDays(days)
       } else {
         setError("Failed to load appointments")
         setAppointments([])
