@@ -5,12 +5,13 @@ with open('sql/create_tables.sql') as f:
     sql = f.read()
 
 conn = psycopg2.connect(
-    dbname="mydb",
-    user="myuser",
-    password="secret",
+    dbname= personalSettings.tableName,
+    user= personalSettings.dbUser,
+    password= personalSettings.dbPassword,
     host="localhost",
-    port=5432,
+    port= personalSettings.dbPort,
 )
+
 with conn:
     with conn.cursor() as cur:
         cur.execute(sql)
