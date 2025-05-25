@@ -465,6 +465,7 @@ export default function PatientAppointments() {
             <Button 
               onClick={handleSubmitFeedback}
               disabled={submittingFeedback}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
             >
               {submittingFeedback ? (
                 <>
