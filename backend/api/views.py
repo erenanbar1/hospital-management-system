@@ -63,3 +63,5 @@ def user_registration(request):
         return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
