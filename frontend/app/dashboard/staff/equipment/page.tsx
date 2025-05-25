@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Heart, User, Package, Edit, Save, X, Plus, Minus, Search, PlusCircle } from "lucide-react"
+import { Heart, User, Package, Edit, Save, X, Plus, Minus, Search, PlusCircle, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useUser } from "@/hooks/use-user"
+import { logout } from '@/utils/auth'
 
 interface Equipment {
   id: string
@@ -240,9 +241,20 @@ export default function StaffEquipmentPage() {
             <Link href="/dashboard/staff/equipment" className="text-cyan-200 font-semibold">
               Equipment
             </Link>
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              <span>{userName || 'Loading...'}</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                <span>{userName || 'Loading...'}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                className="text-white hover:text-cyan-200 hover:bg-cyan-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </nav>
         </div>

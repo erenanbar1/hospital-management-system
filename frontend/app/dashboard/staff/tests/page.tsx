@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Heart, User, Search, TestTube, Edit, Save, X } from "lucide-react"
+import { Heart, User, Search, TestTube, Edit, Save, X, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useUser } from "@/hooks/use-user"
+import { logout } from '@/utils/auth'
 
 interface BloodTest {
   bt_id: string
@@ -34,8 +35,9 @@ export default function StaffTestsPage() {
   const [editingTest, setEditingTest] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<BloodTest>>({})
 
-  const searchPatientTests = async () => {
-    if (!searchPatientId.trim()) {
+  const searchPatientTests = async (patientId?: string) => {
+    const idToSearch = patientId || searchPatientId
+    if (!idToSearch.trim()) {
       setError("Please enter a patient ID")
       return
     }
@@ -44,7 +46,7 @@ export default function StaffTestsPage() {
     setError("")
     
     try {
-      const response = await fetch(`http://localhost:8000/api/get_patient_blood_tests/${searchPatientId}/`)
+      const response = await fetch(`http://localhost:8000/api/get_patient_blood_tests/${idToSearch}/`)
       const data = await response.json()
 
       if (data.success) {
@@ -63,6 +65,21 @@ export default function StaffTestsPage() {
       setLoading(false)
     }
   }
+
+  // Auto-search when patient ID changes (with debounce)
+  useEffect(() => {
+    if (searchPatientId.trim()) {
+      const timeoutId = setTimeout(() => {
+        searchPatientTests(searchPatientId)
+      }, 500) // 500ms delay to avoid too many API calls
+
+      return () => clearTimeout(timeoutId)
+    } else {
+      // Clear results when input is empty
+      setBloodTests([])
+      setError("")
+    }
+  }, [searchPatientId])
 
   const startEditing = (test: BloodTest) => {
     setEditingTest(test.bt_id)
@@ -146,9 +163,20 @@ export default function StaffTestsPage() {
             <Link href="/dashboard/staff/equipment" className="hover:text-cyan-200">
               Equipment
             </Link>
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              <span>{userName || 'Loading...'}</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                <span>{userName || 'Loading...'}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                className="text-white hover:text-cyan-200 hover:bg-cyan-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </nav>
         </div>
@@ -177,7 +205,7 @@ export default function StaffTestsPage() {
                 />
               </div>
               <Button 
-                onClick={searchPatientTests}
+                onClick={() => searchPatientTests()}
                 disabled={loading}
                 className="bg-blue-500 hover:bg-blue-600"
               >
