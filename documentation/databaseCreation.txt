@@ -1,0 +1,40 @@
+# This file is an explanation file explaining how to set up
+    the postgreSQL database. 
+
+# Go to this link and download postgreSQL 16.4 for your version
+    of pc and then run the executable (Don't forget to set an 
+    admin password and check that port is 5432):
+https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+
+# Run the following command in command prompt and enter password:
+createdb --username=postgres hospitalSystem
+
+# If the above line caused an error go to the folder you downloaded
+    postgreSQL at, go to "PostgreSQL/16/bin", open in terminal and run:
+./createdb --username=postgres hospitalSystem
+
+# Create a file called personalSettings.py in the same directory as the
+    settings.py file and paste the following as its contents (your db information in quotations):
+
+# Database Info
+tableName = "hospitalSystem"
+dbUser = <userName> # If you have not created a user it is most probably postgres
+dbPassword = <password>
+dbPort = "5432"
+
+#TODO add init to database
+_____________________________________________________________________________________________________
+
+# If you want to check your database and the information you send use "pgAdmin 4" downloaded with
+    your postgreSQL installation. On the left side (Object Explorer) go to: 
+    Servers -> PostgreSQL 16 -> Databases -> hospitalSystem -> Schemas
+
+# In case something breaks or you send excess data to the database run the following
+    command and restart from line 13:
+dropdb --username=postgres hospitalSystem
+
+# If you again get a non definition error do the same as the line 16 suggests. Go to "PostgreSQL/16/bin"
+    and run the following command. Then restart from line 16:
+./dropdb --username=postgres hospitalSystem
+
+
