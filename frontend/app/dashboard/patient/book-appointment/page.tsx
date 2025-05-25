@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Heart, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,16 @@ export default function BookAppointment() {
   const [selectedDoctor, setSelectedDoctor] = useState("")
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedTime, setSelectedTime] = useState("")
+  
+  interface Doctor {
+    doctor_id: number;
+    doctor_name: string;
+    doctor_surname: string;
+    price?: string | number;
+  }
+  
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [loading, setLoading] = useState(false)
 
   const timeSlots = [
     { time: "08:00 - 07:00", status: "choose", available: true },
@@ -36,6 +46,42 @@ export default function BookAppointment() {
 
   const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1)
 
+  // Function to fetch doctors by department
+  const fetchDoctorsByDepartment = async (deptName: string) => {
+    if (!deptName) return;
+
+    setLoading(true);
+    console.log("Fetching doctors for department:", deptName);
+
+    try {
+      // Make API request to your backend
+      const response = await fetch(`http://localhost:8000/api/filter_doctors_by_dept/?dept_name=${encodeURIComponent(deptName)}`);
+      const data = await response.json();
+
+      console.log("API Response:", data);
+
+      if (data.success && Array.isArray(data.doctors)) {
+        setDoctors(data.doctors);
+      } else {
+        console.error("API error:", data.message || "Unknown error");
+        setDoctors([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch doctors:", error);
+      setDoctors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update doctors list when department changes
+  const handleDepartmentChange = (deptName: string) => {
+    console.log("Department selected:", deptName);
+    setSelectedDepartment(deptName);
+    setSelectedDoctor(""); // Reset doctor selection
+    fetchDoctorsByDepartment(deptName);
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Card className="bg-white/90 backdrop-blur-sm">
@@ -48,29 +94,47 @@ export default function BookAppointment() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Select Department</label>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <Select
+                  value={selectedDepartment}
+                  onValueChange={handleDepartmentChange}
+                >
                   <SelectTrigger className="bg-cyan-100">
                     <SelectValue placeholder="Choose department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cardiology">Cardiology</SelectItem>
-                    <SelectItem value="pediatrics">Pediatrics</SelectItem>
-                    <SelectItem value="dermatology">Dermatology</SelectItem>
-                    <SelectItem value="neurology">Neurology</SelectItem>
+                    {/* Make sure these match exactly with your backend values */}
+                    <SelectItem value="Cardiology">Cardiology</SelectItem>
+                    <SelectItem value="Pediatrics">Pediatrics</SelectItem>
+                    <SelectItem value="Dermatology">Dermatology</SelectItem>
+                    <SelectItem value="Neurology">Neurology</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">Select Doctor</label>
-                <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                <Select
+                  value={selectedDoctor}
+                  onValueChange={setSelectedDoctor}
+                  disabled={loading || !doctors.length}
+                >
                   <SelectTrigger className="bg-cyan-100">
-                    <SelectValue placeholder="Choose doctor" />
+                    <SelectValue placeholder={
+                      loading ? "Loading..." :
+                        !selectedDepartment ? "Select a department first" :
+                          !doctors.length ? "No doctors available" :
+                            "Choose doctor"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dr-smith">Dr. John Smith</SelectItem>
-                    <SelectItem value="dr-johnson">Dr. Sarah Johnson</SelectItem>
-                    <SelectItem value="dr-brown">Dr. Michael Brown</SelectItem>
+                    {doctors.map((doctor) => (
+                      <SelectItem
+                        key={doctor.doctor_id}
+                        value={String(doctor.doctor_id)}
+                      >
+                        Dr. {doctor.doctor_name} {doctor.doctor_surname}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -141,6 +205,7 @@ export default function BookAppointment() {
                       text-xs h-8
                       ${slot.available ? "hover:bg-green-50 border-green-300" : "bg-red-100 text-red-600"}
                     `}
+                    onClick={() => slot.available && setSelectedTime(slot.time)}
                   >
                     {slot.time}
                   </Button>
@@ -157,11 +222,18 @@ export default function BookAppointment() {
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-sm text-gray-600">Department</p>
-                    <p className="font-medium">Cardiology</p>
+                    <p className="font-medium">{selectedDepartment || "Not selected"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Doctor</p>
-                    <p className="font-medium">Dr. John Smith</p>
+                    <p className="font-medium">
+                      {selectedDoctor && doctors.length > 0
+                        ? (() => {
+                          const doctor = doctors.find(d => String(d.doctor_id) === selectedDoctor);
+                          return doctor ? `Dr. ${doctor.doctor_name} ${doctor.doctor_surname}` : "Not selected";
+                        })()
+                        : "Not selected"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Date</p>
@@ -169,7 +241,7 @@ export default function BookAppointment() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Time</p>
-                    <p className="font-medium">14:00 - 15:00</p>
+                    <p className="font-medium">{selectedTime || "14:00 - 15:00"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Balance</p>
@@ -177,12 +249,24 @@ export default function BookAppointment() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Appointment Price</p>
-                    <p className="font-medium">xxx</p>
+                    <p className="font-medium">
+                      {selectedDoctor && doctors.length > 0
+                        ? (() => {
+                          const doctor = doctors.find(d => String(d.doctor_id) === selectedDoctor);
+                          return doctor && doctor.price ? doctor.price : "xxx";
+                        })()
+                        : "xxx"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Button className="w-full bg-green-500 hover:bg-green-600 text-white">Save Appointment</Button>
+              <Button
+                className="w-full bg-green-500 hover:bg-green-600 text-white"
+                disabled={!selectedDoctor || !selectedDepartment || !selectedTime}
+              >
+                Save Appointment
+              </Button>
             </div>
           </div>
         </CardContent>
