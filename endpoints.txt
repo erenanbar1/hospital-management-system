@@ -193,7 +193,7 @@ JSON RETURN BODY
 --------------------------------------
 --------------------------------------
 ADD BLOOD TEST ENDPOINT
-http://localhost:8000//api/create_blood_test/
+http://localhost:8000/api/create_blood_test/
 
 METHOD: POST
 
@@ -362,40 +362,143 @@ JSON RETURN BODY
 }
 --------------------------------------
 --------------------------------------
-STAFF ADDS BLOOD TEST RESULT TO PATIENT
-
---------------------------------------
---------------------------------------
-GET INVENTORY LIST
-
-
---------------------------------------
---------------------------------------
-UPDATE INVENTORY ITEM VALUE STATUS
-
-
-
---------------------------------------
---------------------------------------
---------------------------------------
-GIVE FEEDBACK ENDPOINT
-http://localhost:8000/api/give_feedback/
+CREATE NEW EQUIPMENT ITEM ENDPOINT
+http://localhost:8000/api/create_equipment/
 
 METHOD: POST
 
 JSON REQUEST BODY
 {
-  "patient_id": "U0001",
-  "doc_id": "U0006",
-  "rating": 4.5,
-  "comment": "Very helpful and professional."
+    "name": "Blood Analyzer",
+    "format": "Piece",
+    "amount": "5"
 }
 
 JSON RETURN BODY
 {
-  "success": true,
-  "message": "Feedback submitted successfully.",
-  "f_id": "F12AB"
+    "success": true,
+    "message": "Equipment created successfully.",
+    "equipment": {
+        "me_id": "ME004",
+        "name": "Blood Analyzer",
+        "format": "Piece",
+        "amount": "5"
+    }
 }
 --------------------------------------
+--------------------------------------
+GET PATIENT BLOOD TESTS ENDPOINT
+http://localhost:8000/api/get_patient_blood_tests/<str:patient_id>/
+
+METHOD: GET
+
+ex: http://localhost:8000/api/get_patient_blood_tests/U0001/
+THERE IS NO JSON BODY FOR REQUEST, ARGUMENT IS IN URL ADDRESS <str:patient_id>
+
+JSON RETURN BODY
+{
+    "success": true,
+    "blood_tests": [
+        {
+            "bt_id": "BT001",
+            "vitamins": "Vitamin A: 50mcg, Vitamin C: 20mg",
+            "minerals": "Na: 2, P: 2",
+            "cholesterol": "180.00",
+            "glucose": "90.00",
+            "hemoglobin": "14.20",
+            "white_blood_cells": "6.50",
+            "red_blood_cells": "4.70",
+            "test_date": "2024-12-11",
+            "patient_name": "John",
+            "patient_surname": "Doe"
+        }
+    ]
+}
+--------------------------------------
+--------------------------------------
+UPDATE BLOOD TEST RESULTS ENDPOINT
+http://localhost:8000/api/update_blood_test_results/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+    "bt_id": "BT001",
+    "vitamins": "Vitamin A: 55mcg, Vitamin C: 25mg",
+    "minerals": "Na: 2.1, P: 2.2",
+    "cholesterol": "175.00",
+    "glucose": "88.00",
+    "hemoglobin": "14.50",
+    "whiteBC": "6.20",
+    "redBC": "4.80"
+}
+
+JSON RETURN BODY
+{
+    "success": true,
+    "message": "Blood test results updated successfully."
+}
+--------------------------------------
+--------------------------------------
+GET RECENT BLOOD TESTS ENDPOINT
+http://localhost:8000/api/get_recent_blood_tests/
+
+METHOD: GET
+
+THERE IS NO JSON BODY FOR REQUEST
+
+JSON RETURN BODY
+{
+    "success": true,
+    "recent_tests": [
+        {
+            "bt_id": "BT001",
+            "patient_name": "John",
+            "patient_surname": "Doe",
+            "test_date": "2024-12-11",
+            "test_type": "Blood Test",
+            "status": "Completed"
+        },
+        {
+            "bt_id": "BT002",
+            "patient_name": "Jane",
+            "patient_surname": "Smith",
+            "test_date": "2024-12-11",
+            "test_type": "Blood Test",
+            "status": "Pending"
+        }
+    ]
+}
+--------------------------------------
+
+--------------------------------------
+CREATE PRESCRIPTION
+http://localhost:8000/api/create_prescription/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+    "patient_id": "U0004",
+    "doctor_id": "U0008",
+    "usage": "Just and unjust"
+}
+
+JSON RESPONSE BODY
+{
+    "success": true,
+    "prescription": "PR008"
+}
+--------------------------------------
+--------------------------------------
+CREATE PRESCRIPTION
+http://localhost:8000/api/prescribe_medication/
+
+METHOD: POST
+
+JSON REQUEST BODY
+{
+    "prescription": "PR007",
+    "medicine": "M0002"
+}
 --------------------------------------
