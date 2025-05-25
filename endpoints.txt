@@ -195,7 +195,34 @@ STAFF ADDS BLOOD TEST RESULT TO PATIENT
 --------------------------------------
 --------------------------------------
 GET INVENTORY LIST
+http://localhost:8000//api/get_equipment/
 
+METHOD: GET
+
+JSON RETURN BODY
+{
+    "success": true,
+    "equipment": [
+        {
+            "id": "ME003",
+            "name": "Gloves",
+            "format": "Box",
+            "amount": "50"
+        },
+        {
+            "id": "ME002",
+            "name": "Stethoscope",
+            "format": "Piece",
+            "amount": "20"
+        },
+        {
+            "id": "ME001",
+            "name": "Syringe",
+            "format": "Piece",
+            "amount": "100"
+        }
+    ]
+}
 
 --------------------------------------
 --------------------------------------
