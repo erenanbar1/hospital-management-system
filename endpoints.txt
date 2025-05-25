@@ -195,7 +195,7 @@ STAFF ADDS BLOOD TEST RESULT TO PATIENT
 --------------------------------------
 --------------------------------------
 GET INVENTORY LIST
-http://localhost:8000//api/get_equipment/
+http://localhost:8000//api/equipment/
 
 METHOD: GET
 
@@ -227,7 +227,15 @@ JSON RETURN BODY
 --------------------------------------
 --------------------------------------
 UPDATE INVENTORY ITEM VALUE STATUS
+http://localhost:8000/api/equipment/
 
+METHOD: POST
+
+JSON REQUEST BODY
+{
+    "equipment": "ME002",
+    "amount": "19"
+}
 
 
 --------------------------------------

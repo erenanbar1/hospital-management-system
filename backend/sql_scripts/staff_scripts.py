@@ -57,3 +57,26 @@ def get_equipment():
                 return equipment
     finally:
         conn.close()
+
+UPDATE_EQUIPMENT_SQL_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'sql', 'equipmentSQL', 'updateEquipment.sql')
+)
+
+def update_equipment(equipment: str, amount: str):
+            with open(UPDATE_EQUIPMENT_SQL_PATH, 'r') as f:
+                sql = f.read()
+
+            conn = psycopg2.connect(
+                dbname=personalSettings.tableName,
+                user=personalSettings.dbUser,
+                password=personalSettings.dbPassword,
+                host="localhost",
+                port=personalSettings.dbPort
+            )
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.execute(sql, [amount, equipment])
+                return True
+            finally:
+                conn.close()

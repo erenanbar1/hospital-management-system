@@ -34,7 +34,7 @@ urlpatterns = [
 
     path('api/make_appointment/', make_appointment_view, name='make_appointment'),
     path('api/create_blood_test/', create_blood_test_view, name='create_blood_test'),
-    path('api/get_equipment/', get_equipment_view, name='get_equipment'),
+    path('api/equipment/', get_equipment_view, name='get_equipment'),
     path('api/get_appointments/<str:patient_id>/', get_appointments_view),
     path('api/get_health_card/<str:patient_id>/', get_health_card_view),
     path('api/get_doctor_appointments/<str:doc_id>/', getDoctorAppointments),
