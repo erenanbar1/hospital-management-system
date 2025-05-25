@@ -83,10 +83,10 @@ export default function DoctorDashboard() {
     <div className="max-w-6xl mx-auto p-6">
       <Card className="bg-white/90 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2">
             <Calendar className="h-6 w-6" />
-            Doctor Schedule {userId ? `(${userId})` : '(Demo Mode)'}
-          </CardTitle>
+            Doctor Schedule {userId && `(${userId})`}
+            </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid lg:grid-cols-3 gap-8">
@@ -110,10 +110,10 @@ export default function DoctorDashboard() {
               {isLoading ? (
                 <div className="text-center py-10">Loading schedule...</div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Generate time slots from 8:00 AM to 5:00 PM (17:00) */}
-                  {Array.from({ length: 18 }).map((_, index) => {
-                    // IMPORTANT: Start from TS001, TS002, etc. to match the API
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {/* Generate only 10 time slots from 8:00 AM to 12:30 PM */}
+                  {Array.from({ length: 10 }).map((_, index) => {
+                    // Start from TS001, TS002, etc. to match the API
                     const slotNumber = index + 1
                     const tsId = `TS${String(slotNumber).padStart(3, '0')}`
 
@@ -135,18 +135,27 @@ export default function DoctorDashboard() {
                     return (
                       <div
                         key={tsId}
-                        className={`p-3 rounded-lg ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500'
-                          } text-white text-sm transition-colors cursor-pointer`}
+                        className={`
+                          p-4 rounded-lg border shadow-sm
+                          ${isAvailable 
+                            ? 'bg-green-50 border-green-200 hover:bg-green-100' 
+                            : 'bg-red-50 border-red-200'
+                          } 
+                          transition-colors cursor-pointer
+                        `}
                         title={`Time Slot: ${tsId}`}
                       >
-                        <div className="font-medium">
+                        <div className="flex justify-center items-center mb-2">
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {isAvailable ? 'Available' : 'Unavailable'}
+                          </span>
+                        </div>
+                        <div className="font-medium text-center">
                           {formatTime(startHour, startMin)}
-                        </div>
-                        <div className="text-xs opacity-90">
-                          to {formatTime(endHour, endMin)}
-                        </div>
-                        <div className="text-xs mt-1 opacity-75">
-                          {tsId}
+                          <span className="mx-1">-</span>
+                          {formatTime(endHour, endMin)}
                         </div>
                       </div>
                     )
