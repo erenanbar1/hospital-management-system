@@ -72,3 +72,73 @@ DATABASES = {
     }
 }
 api/views.py
+
+
+
+
+
+
+
+
+List available time slots of a doctor for a given date
+(SELECT ts-id, start_time, end_time
+FROM time_slot)
+EXCEPT
+(
+(SELECT a1.ts-id, ts1.start_time, ts1.end_time 
+FROM appointment AS a1, time_slot AS ts1
+WHERE a1.ts-id = ts1.ts-id AND a1.doc-id = ‘00001’ AND a1.date = '2025-04-01')
+UNION
+(SELECT unav.ts-id, ts2.start_time, ts2.end_time
+FROM unavailability AS unav, time_slot AS ts2
+WHERE unav.ts-id = ts2.ts-id AND unav.doc-id = ‘00001’ AND unav.date = '2025-04-01')
+)
+
+This is the list_available_timeslots_of_doctor.sql that returns the list of timeslots available for a given doctor, on a given date. 
+Available means, the timeslots are not appointed by another patient.
+
+The list_available_timeslots_of_doctor.py will be located at api/sql_scripts/
+
+
+1) File to be created in api/sql directory: list_available_timeslots_of_doctor.sql
+2) File to be created in api/sql_scripts directory: list_available_timeslots_of_doctor.py
+3) View to be added to api/views.py: list_available_timeslots_of_doctor_view
+
+The view function will take 2 parameters: doctor id, date, 
+and return the list of available time slots of the given doctor for the given date.
+
+
+
+*******************************
+This is the list_available_timeslots_of_doctor.sql that returns the list of timeslots available for a given doctor, on a given date. 
+Available means, the timeslots are not appointed by another patient.
+
+The list_available_timeslots_of_doctor.py will be located at api/sql_scripts/
+
+
+1) File to be created in api/sql directory: list_available_timeslots_of_doctor.sql
+2) File to be created in api/sql_scripts directory: list_available_timeslots_of_doctor.py
+3) View to be added to api/views.py: list_available_timeslots_of_doctor_view
+
+The view function will take 2 parameters: doctor id, date, 
+and return the list of available time slots of the given doctor for the given date.
+
+After you complete the functionality add its url to urls.py and insert the corresponding entry for this endpoint to the endpoint.txt 
+
+
+*******************************
+This is the doctor_declare_unavailability.sql that returns the list of timeslots available for a given doctor, on a given date. 
+
+
+1) File to be created in api/sql directory: doctor_declare_unavailability.sql
+    This sql query will insert an unavailability of a doctor for a given time slot and date.
+    It will take as argument timo slot id, doctor id and date.
+2) File to be created in api/sql_scripts directory: doctor_declare_unavailability.py
+    This function will make use of the sql query to create the unavailiblit of the specified doctor for the specified dat and timeslot
+3) View to be added to api/views.py: doctor_declare_unavailability_view
+    This view will be a post request serving as an endpoint
+
+The view function will take 2 parameters: doctor id, time_slot id, date 
+and return the list of available time slots of the given doctor for the given date.
+
+After you complete the functionality add its url to urls.py and insert the corresponding entry for this endpoint to the endpoint.txt 

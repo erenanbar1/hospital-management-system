@@ -10,6 +10,8 @@ from login import login as login_func
 from registration import register as register_func
 from make_appointment import make_appointment as make_appointment_func
 from filter_doctors_by_dept import filter_doctors_by_dept as filter_doctors_by_dept_func
+from list_available_timeslots_of_doctor import list_available_timeslots_of_doctor as list_timeslots_func
+from doctor_declare_unavailability import declare_unavailability
 
 
 @csrf_exempt
@@ -98,5 +100,39 @@ def filter_doctors_by_dept_view(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
         return JsonResponse({"success": False, "message": "Only GET allowed."}, status=405)
+
+
+@csrf_exempt
+def list_available_timeslots_of_doctor_view(request):
+    if request.method == "GET":
+        doc_id = request.GET.get("doc_id")
+        date = request.GET.get("date")
+        if not doc_id or not date:
+            return JsonResponse({"success": False, "message": "Doctor ID and date are required."}, status=400)
+        try:
+            timeslots = list_timeslots_func(doc_id, date)
+            return JsonResponse({"success": True, "timeslots": timeslots})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Only GET allowed."}, status=405)
+
+
+@csrf_exempt
+def doctor_declare_unavailability_view(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            ts_id = data.get("ts_id")
+            doc_id = data.get("doc_id")
+            date = data.get("date")
+            if not all([ts_id, doc_id, date]):
+                return JsonResponse({"success": False, "message": "All fields are required."}, status=400)
+            ua_id = declare_unavailability(ts_id, doc_id, date)
+            return JsonResponse({"success": True, "message": "Unavailability declared.", "ua_id": ua_id})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
 
 
