@@ -49,6 +49,7 @@ export default function DoctorDashboard() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [doctorAppointments, setDoctorAppointments] = useState<DoctorAppointment[]>([])
+  const [pastAppointments, setPastAppointments] = useState<DoctorAppointment[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false)
 
@@ -134,23 +135,58 @@ export default function DoctorDashboard() {
 
       if (response.data.success) {
         const currentDate = new Date();
-        // Filter out past appointments and keep only upcoming ones
-        const upcomingAppointments = response.data.appointments.filter(appointment => {
-          const appointmentDateTime = new Date(appointment.date + (appointment.starttime ? 'T' + appointment.starttime : ''));
-          return appointmentDateTime >= currentDate;
+        const currentDateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+        // Separate past and upcoming appointments
+        const past: DoctorAppointment[] = [];
+        const upcoming: DoctorAppointment[] = [];
+
+        response.data.appointments.forEach(appointment => {
+          // Properly compare dates accounting for time component
+          const appointmentDate = new Date(appointment.date);
+          const appointmentDateStr = appointmentDate.toISOString().split('T')[0];
+
+          // For appointments today, check the time
+          if (appointmentDateStr === currentDateStr && appointment.starttime) {
+            const [hours, minutes] = appointment.starttime.split(':');
+            const appointmentTime = new Date();
+            appointmentTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+            if (appointmentTime > currentDate) {
+              upcoming.push(appointment);
+            } else {
+              past.push(appointment);
+            }
+          }
+          // For appointments on different days, compare dates
+          else if (appointmentDateStr < currentDateStr) {
+            past.push(appointment);
+          } else {
+            upcoming.push(appointment);
+          }
         });
 
-        // Sort upcoming appointments by date (closest to furthest)
-        const sortedAppointments = upcomingAppointments.sort((a, b) => {
+        // Sort past appointments by date (most recent first)
+        const sortedPastAppointments = past.sort((a, b) => {
+          const dateA = new Date(a.date + (a.starttime ? 'T' + a.starttime : ''));
+          const dateB = new Date(b.date + (b.starttime ? 'T' + b.starttime : ''));
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        // Sort upcoming appointments by date (closest first)
+        const sortedUpcomingAppointments = upcoming.sort((a, b) => {
           const dateA = new Date(a.date + (a.starttime ? 'T' + a.starttime : ''));
           const dateB = new Date(b.date + (b.starttime ? 'T' + b.starttime : ''));
           return dateA.getTime() - dateB.getTime();
         });
 
-        setDoctorAppointments(sortedAppointments);
+        setDoctorAppointments(sortedUpcomingAppointments);
+        setPastAppointments(sortedPastAppointments);
       }
     } catch (error) {
       console.error('Error fetching doctor appointments:', error);
+      setDoctorAppointments([]);
+      setPastAppointments([]);
     } finally {
       setLoadingAppointments(false);
     }
@@ -290,40 +326,6 @@ export default function DoctorDashboard() {
   );
 
 
-  const fetchUpcomingAppointments = async (doctorId: string) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/get_doctor_appointments/${doctorId}/`);
-      const data = await response.json();
-
-      if (data.success && data.appointments) {
-        // Sort appointments by date
-        const sortedAppointments = [...data.appointments].sort((a, b) => {
-          const dateA = new Date(`${a.date}T${a.startTime || a.starttime}`);
-          const dateB = new Date(`${b.date}T${b.startTime || b.starttime}`);
-          return dateA.getTime() - dateB.getTime();
-        });
-
-        // Update state with the appointments
-        setDoctorAppointments(sortedAppointments);
-      } else {
-        console.error("Failed to fetch doctor appointments");
-        setDoctorAppointments([]);
-      }
-
-    } catch (error) {
-      console.error("Error fetching doctor appointments:", error);
-      setDoctorAppointments([]);
-    } finally {
-      setLoadingAppointments(false);
-    }
-  };
-
-  useEffect(() => {
-    const doctorId = userId || 'U0006';
-    setLoadingAppointments(true);
-    fetchUpcomingAppointments(doctorId);
-  }, [userId]); // Re-fetch when userId changes
-
   return (
     <div className="max-w-6xl mx-auto p-6">
       {/* Main Schedule Card */}
@@ -361,14 +363,17 @@ export default function DoctorDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   {/* Time slots rendering code */}
                   {Array.from({ length: 10 }).map((_, index) => {
+                    // IMPORTANT: Start from TS001, TS002, etc. to match the API
                     const slotNumber = index + 1
                     const tsId = `TS${String(slotNumber).padStart(3, '0')}`
 
+                    // Adjust time calculation to match your database slots
                     const startHour = 8 + Math.floor(index / 2)
                     const startMin = index % 2 === 0 ? "00" : "30"
                     const endHour = startHour + (startMin === "30" ? 1 : 0)
                     const endMin = startMin === "00" ? "30" : "00"
 
+                    // Format for 12-hour display
                     const formatTime = (hour: number, min: string) => {
                       const period = hour >= 12 ? 'PM' : 'AM'
                       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
@@ -398,6 +403,7 @@ export default function DoctorDashboard() {
                         <div className="text-xs opacity-90">
                           to {formatTime(endHour, endMin)}
                         </div>
+                        {/* Removed the time slot ID display from here */}
                       </div>
                     )
                   })}
@@ -408,90 +414,164 @@ export default function DoctorDashboard() {
         </CardContent>
       </Card>
 
-      {/* Upcoming Appointments Card */}
+      {/* Appointments Card - Upcoming and Past Appointments */}
       <Card className="bg-white/90 backdrop-blur-sm mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-6 w-6" />
-            Upcoming Appointments
+            Appointments
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loadingAppointments ? (
-            <div className="flex items-center justify-center p-6">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent"></div>
-              <span className="ml-2 text-sm text-gray-500">Loading appointments...</span>
-            </div>
-          ) : doctorAppointments && doctorAppointments.length > 0 ? (
-            <div className="space-y-4">
-              {doctorAppointments.map((appointment, index) => {
-                const appointmentDate = new Date(appointment.date);
-                // Format date for display
-                const formattedDate = new Intl.DateTimeFormat('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                }).format(appointmentDate);
+          {/* Upcoming Appointments Section */}
+          <div className="mb-6">
+            <h3 className="font-medium mb-4">
+              Upcoming Appointments
+            </h3>
 
-                // Format time for display - handle both startTime and starttime formats
-                const startTime = appointment.starttime || '';
-                const endTime = appointment.endtime || '';
+            {loadingAppointments ? (
+              <div className="flex items-center justify-center p-6">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent"></div>
+                <span className="ml-2 text-sm text-gray-500">Loading appointments...</span>
+              </div>
+            ) : doctorAppointments && doctorAppointments.length > 0 ? (
+              <div className="space-y-4">
+                {doctorAppointments.map((appointment, index) => {
+                  const appointmentDate = new Date(appointment.date);
+                  // Format date for display
+                  const formattedDate = new Intl.DateTimeFormat('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }).format(appointmentDate);
 
-                interface FormatTimeFn {
-                  (timeString: string | undefined): string;
-                }
+                  // Format time for display - handle both startTime and starttime formats
+                  const startTime = appointment.starttime || '';
+                  const endTime = appointment.endtime || '';
 
-                const formatTime: FormatTimeFn = (timeString) => {
-                  if (!timeString) return '';
-                  // Convert 24h format to 12h format
-                  const [hours, minutes] = timeString.split(':');
-                  const hour = parseInt(hours, 10);
-                  const ampm = hour >= 12 ? 'PM' : 'AM';
-                  const hour12 = hour % 12 || 12;
-                  return `${hour12}:${minutes} ${ampm}`;
-                };
+                  interface FormatTimeFn {
+                    (timeString: string | undefined): string;
+                  }
 
-                const isToday = new Date().toDateString() === appointmentDate.toDateString();
-                const isPast = appointmentDate < new Date();
+                  const formatTime: FormatTimeFn = (timeString) => {
+                    if (!timeString) return '';
+                    // Convert 24h format to 12h format
+                    const [hours, minutes] = timeString.split(':');
+                    const hour = parseInt(hours, 10);
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    const hour12 = hour % 12 || 12;
+                    return `${hour12}:${minutes} ${ampm}`;
+                  };
 
-                return (
-                  <div
-                    key={`${appointment.patient_name}-${appointment.date}-${startTime}`}
-                    className={`p-4 rounded-lg border ${isToday
-                      ? 'border-blue-500 bg-blue-50'
-                      : isPast
-                        ? 'border-gray-200 bg-gray-50 opacity-75'
-                        : 'border-green-200 bg-green-50'
-                      }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium">{appointment.patient_name}</h3>
-                        <p className="text-sm text-gray-500">
-                          {formatTime(startTime)} - {formatTime(endTime)}
-                        </p>
-                        <p className="text-sm text-gray-500">{formattedDate}</p>
+                  const isToday = new Date().toDateString() === appointmentDate.toDateString();
+                  const isPast = appointmentDate < new Date();
+
+                  return (
+                    <div
+                      key={`${appointment.patient_name}-${appointment.date}-${startTime}`}
+                      className={`p-4 rounded-lg border ${isToday
+                        ? 'border-blue-500 bg-blue-50'
+                        : isPast
+                          ? 'border-gray-200 bg-gray-50 opacity-75'
+                          : 'border-green-200 bg-green-50'
+                        }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">{appointment.patient_name}</h3>
+                          <p className="text-sm text-gray-500">
+                            {formatTime(startTime)} - {formatTime(endTime)}
+                          </p>
+                          <p className="text-sm text-gray-500">{formattedDate}</p>
+                        </div>
+                        {isToday && (
+                          <Badge className="bg-blue-500">Today</Badge>
+                        )}
+                        {!isToday && !isPast && (
+                          <Badge className="bg-green-500">Upcoming</Badge>
+                        )}
+                        {isPast && (
+                          <Badge variant="outline" className="text-gray-500">Past</Badge>
+                        )}
                       </div>
-                      {isToday && (
-                        <Badge className="bg-blue-500">Today</Badge>
-                      )}
-                      {!isToday && !isPast && (
-                        <Badge className="bg-green-500">Upcoming</Badge>
-                      )}
-                      {isPast && (
-                        <Badge variant="outline" className="text-gray-500">Past</Badge>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No upcoming appointments found.
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No upcoming appointments found.
+              </div>
+            )}
+          </div>
+
+          {/* Past Appointments Section */}
+          <div>
+            <h3 className="font-medium mb-4">
+              Past Appointments
+            </h3>
+
+            {loadingAppointments ? (
+              <div className="flex items-center justify-center p-6">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent"></div>
+                <span className="ml-2 text-sm text-gray-500">Loading appointments...</span>
+              </div>
+            ) : pastAppointments && pastAppointments.length > 0 ? (
+              <div className="space-y-4">
+                {pastAppointments.map((appointment, index) => {
+                  const appointmentDate = new Date(appointment.date);
+                  // Format date for display
+                  const formattedDate = new Intl.DateTimeFormat('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }).format(appointmentDate);
+
+                  // Format time for display - handle both startTime and starttime formats
+                  const startTime = appointment.starttime || '';
+                  const endTime = appointment.endtime || '';
+
+                  interface FormatTimeFn {
+                    (timeString: string | undefined): string;
+                  }
+
+                  const formatTime: FormatTimeFn = (timeString) => {
+                    if (!timeString) return '';
+                    // Convert 24h format to 12h format
+                    const [hours, minutes] = timeString.split(':');
+                    const hour = parseInt(hours, 10);
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    const hour12 = hour % 12 || 12;
+                    return `${hour12}:${minutes} ${ampm}`;
+                  };
+
+                  return (
+                    <div
+                      key={`${appointment.patient_name}-${appointment.date}-${startTime}-past`}
+                      className="p-4 rounded-lg border border-gray-200 bg-gray-50"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">{appointment.patient_name}</h3>
+                          <p className="text-sm text-gray-500">
+                            {formatTime(startTime)} - {formatTime(endTime)}
+                          </p>
+                          <p className="text-sm text-gray-500">{formattedDate}</p>
+                        </div>
+                        <Badge variant="outline" className="text-gray-500">Past</Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No past appointments found.
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
