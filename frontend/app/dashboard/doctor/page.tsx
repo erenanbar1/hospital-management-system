@@ -78,7 +78,21 @@ export default function DoctorDashboard() {
       );
 
       if (response.data.success) {
-        setDoctorAppointments(response.data.appointments);
+        const currentDate = new Date();
+        // Filter out past appointments and keep only upcoming ones
+        const upcomingAppointments = response.data.appointments.filter(appointment => {
+          const appointmentDateTime = new Date(appointment.date + (appointment.starttime ? 'T' + appointment.starttime : ''));
+          return appointmentDateTime >= currentDate;
+        });
+
+        // Sort upcoming appointments by date (closest to furthest)
+        const sortedAppointments = upcomingAppointments.sort((a, b) => {
+          const dateA = new Date(a.date + (a.starttime ? 'T' + a.starttime : ''));
+          const dateB = new Date(b.date + (b.starttime ? 'T' + b.starttime : ''));
+          return dateA.getTime() - dateB.getTime();
+        });
+
+        setDoctorAppointments(sortedAppointments);
       }
     } catch (error) {
       console.error('Error fetching doctor appointments:', error);
@@ -120,6 +134,7 @@ export default function DoctorDashboard() {
             <DoctorScheduleCalendar
               userId={userId || 'U0006'}
               onDateSelect={handleDateSelect}
+              appointments={doctorAppointments}
             />
 
             {/* Time Slots Display */}
