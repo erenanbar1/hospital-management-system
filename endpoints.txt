@@ -118,7 +118,6 @@ JSON RETURN BODY
 }
 --------------------------------------
 --------------------------------------
-<<<<<<< Updated upstream
 REQUEST PATIENT HEALTH CARD ENDPOINT
 http://localhost:8000//api/get_health_card/<str:patient_id>/
 
@@ -143,7 +142,6 @@ JSON RETURN BODY
         }
     ]
 }
-=======
 LIST AVAILABLE TIMESLOTS OF DOCTOR ENDPOINT
 http://localhost:8000/api/list_available_timeslots_of_doctor/?doc_id=U0006&date=2024-12-01
 
@@ -206,5 +204,4 @@ UPDATE INVENTORY ITEM VALUE STATUS
 
 
 --------------------------------------
->>>>>>> Stashed changes
 --------------------------------------
