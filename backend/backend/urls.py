@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from api.views import user_login, user_registration
+from api.views import user_login, user_registration, make_appointment_view
 
 
 
@@ -26,6 +26,8 @@ urlpatterns = [
     path('api/login/', user_login, name='user_login'),
 
     path('api/register/', user_registration, name='user_registration'),
+
+    path('api/make_appointment/', make_appointment_view, name='make_appointment'),
 
 ]
 

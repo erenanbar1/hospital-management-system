@@ -20,3 +20,15 @@ JSON BODY
   "phone": "5551234567"
 }
 --------------------------------------
+--------------------------------------
+MAKE APPOINTMENT ENDPOINT
+http://localhost:8000/api/make_appointment/
+
+JSON BODY
+{
+  "patient_id": "U0001",
+  "doc_id": "U0006",
+  "ts_id": "TS001",
+  "date": "2024-12-01"
+}
+--------------------------------------

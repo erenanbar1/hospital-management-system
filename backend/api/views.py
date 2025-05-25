@@ -9,6 +9,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql_scripts')))
 from login import login as login_func
 from registration import register as register_func
+from make_appointment import make_appointment as make_appointment_func
 
 
 @csrf_exempt
@@ -52,6 +53,25 @@ def user_registration(request):
                 "u_id": u_id,
                 "hc_id": hc_id
             })
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    else:
+        return JsonResponse({"success": False, "message": "Only POST allowed."}, status=405)
+
+
+@csrf_exempt
+def make_appointment_view(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            patient_id = data.get("patient_id")
+            doc_id = data.get("doc_id")
+            ts_id = data.get("ts_id")
+            date = data.get("date")
+            if not all([patient_id, doc_id, ts_id, date]):
+                return JsonResponse({"success": False, "message": "All fields are required."}, status=400)
+            make_appointment_func(patient_id, doc_id, ts_id, date)
+            return JsonResponse({"success": True, "message": "Appointment created."})
         except Exception as e:
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     else:
