@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from api.views import user_login, user_registration, make_appointment_view, filter_doctors_by_dept_view, list_available_timeslots_of_doctor_view, doctor_declare_unavailability_view, get_patient_balance_view, get_patient_balance_view, give_feedback_view
+from api.views import user_login, user_registration, make_appointment_view, filter_doctors_by_dept_view, list_available_timeslots_of_doctor_view, doctor_declare_unavailability_view, get_patient_balance_view, give_feedback_view
 
 from api.patientViews.healthCardViews import get_health_card_view
 from api.staffViews.staffBloodTestView import create_blood_test_view, create_prescripton_view, prescribe_medication_view
@@ -27,13 +27,13 @@ from api.staffViews.staffTestResultsView import get_patient_blood_tests_view, up
 
 from api.patientViews.getAppointmentViews import get_appointments_view, getDoctorAppointments
 
+# Import admin views
+from api.admin_views import admin_users_view, admin_stats_view, admin_user_detail_view, admin_departments_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', user_login, name='user_login'),
-
     path('api/register/', user_registration, name='user_registration'),
-
     path('api/make_appointment/', make_appointment_view, name='make_appointment'),
     path('api/create_blood_test/', create_blood_test_view, name='create_blood_test'),
     path('api/equipment/', get_equipment_view, name='get_equipment'),
@@ -51,7 +51,12 @@ urlpatterns = [
     path('api/update_blood_test_results/', update_blood_test_results_view, name='update_blood_test_results'),
     path('api/get_recent_blood_tests/', get_recent_blood_tests_view, name='get_recent_blood_tests'),
     path('api/give_feedback/', give_feedback_view, name='give_feedback'),
-
+    
+    # Admin endpoints
+    path('api/admin/users/', admin_users_view, name='admin_users'),
+    path('api/admin/users/<str:user_id>/', admin_user_detail_view, name='admin_user_detail'),
+    path('api/admin/stats/', admin_stats_view, name='admin_stats'),
+    path('api/admin/departments/', admin_departments_view, name='admin_departments'),
 ]
 
 
